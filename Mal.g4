@@ -1,4 +1,4 @@
-grammar mal;
+grammar Mal;
 
 uProgram : instruction*;
 
@@ -19,32 +19,32 @@ destination : cRegister
             | condition
             ;
 
-expression : assignmentStatement
-           | operation '<<' '8'
-           | operation '>>' '1'
-           | operation
+expression : assignmentStatement                #assignmentExpression
+           | operation '<<' '8'                 #sll8Expression
+           | operation '>>' '1'                 #sra1Expression
+           | operation                          #operationExpression
            ;
 
-operation : aRegister 'AND' bRegister
-          | bRegister 'AND' aRegister
-          | aRegister 'OR' bRegister
-          | bRegister 'OR' aRegister
-          | 'NOT' aRegister
-          | 'NOT' bRegister
-          | aRegister '+' bRegister
-          | bRegister '+' aRegister
-          | aRegister '+' '1'
-          | bRegister '+' '1'
-          | bRegister '-' aRegister
-          | '-' aRegister
-          | bRegister '-' '1'
-          | aRegister '+' bRegister '+' '1'
-          | bRegister '+' aRegister '+' '1'
-          | aRegister
-          | bRegister
-          | '-' '1'
-          | '0'
-          | '1'
+operation : aRegister 'AND' bRegister           #andOperation
+          | bRegister 'AND' aRegister           #andOperation
+          | aRegister 'OR' bRegister            #orOperation
+          | bRegister 'OR' aRegister            #orOperation
+          | 'NOT' aRegister                     #aNotOperation
+          | 'NOT' bRegister                     #bNotOperation
+          | aRegister '+' bRegister             #sumOperation
+          | bRegister '+' aRegister             #sumOperation
+          | aRegister '+' '1'                   #aIncOperation
+          | bRegister '+' '1'                   #bIncOperation
+          | bRegister '-' aRegister             #subOperation
+          | '-' aRegister                       #aNegOperation
+          | bRegister '-' '1'                   #bDecOperation
+          | aRegister '+' bRegister '+' '1'     #sumIncOperation
+          | bRegister '+' aRegister '+' '1'     #sumIncOperation
+          | aRegister                           #aPassOperation
+          | bRegister                           #bPassOperation
+          | '-' '1'                             #negOneOperation
+          | '0'                                 #zeroOperation
+          | '1'                                 #oneOperation
           ;
 
 aRegister : 'H';
@@ -86,12 +86,13 @@ wordMemoryStatement : 'rd'
 byteMemoryStatement : 'fetch';
 
 controlStatement : gotoStatement
+                 | gotoMbrExprStatement
                  | ifStatement
                  ;
 
-gotoStatement : 'goto' NAME
-              | 'goto' '(' mbrExpr ')'
-              ;
+gotoStatement : 'goto' NAME;
+
+gotoMbrExprStatement : 'goto' '(' mbrExpr ')';
 
 mbrExpr : 'MBR' 'OR' ADDRESS
         | 'MBR'

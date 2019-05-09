@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Contains the translated microprogram.
@@ -38,6 +39,8 @@ public class TranslatedProgram {
     private List<TranslatedInstruction> instructions;
     private Map<String, Integer> allocations;
     private Map<String, String> ifElseTargets;
+    private Set<String> elseTargets;
+    private boolean invalidIfStatements;
 
     /**
      * Constructor.
@@ -46,6 +49,7 @@ public class TranslatedProgram {
         instructions = new LinkedList<>();
         allocations = new HashMap<>();
         ifElseTargets = new HashMap<>();
+        invalidIfStatements = false;
     }
 
     /**
@@ -68,12 +72,68 @@ public class TranslatedProgram {
     }
 
     /**
-     * Getter for ifElseTargets.
-     *
-     * @return The pairs of if/else target labels.
-     *         The key is the else target label, the value is the if target label.
+     * Add if/else target pairs to the map.
+     * <p>
+     * The map is bidirectional, i.e. uniqueness of both keys and values is preserved.
      */
-    public Map<String, String> getIfElseTargets() {
-        return ifElseTargets;
+    public void addIfElseTarget(String ifLabel, String elseLabel) {
+        // Preserve bidirectionality of mapping: if entry for if label is already in the map, check
+        // that it's paired with the current else label.
+        if (ifElseTargets.containsKey(ifLabel)) {
+            ifElseTargets.put(ifLabel, elseLabel);
+            ifElseTargets.put(elseLabel, ifLabel);
+            elseTargets.add(elseLabel);
+        } else if (!ifElseTargets.get(ifLabel).equals(elseLabel)) {
+            invalidIfStatements = true;
+        }
+    }
+
+    /**
+     * Checks if the label is in an if/else target label pair.
+     *
+     * @param label A target label.
+     * @return <code>true</code> if, and only if, <code>label</code> is in the map.
+     */
+    public boolean hasIfElseTarget(String label) {
+        return ifElseTargets.containsKey(label);
+    }
+
+    /**
+     * Return the other element of an if/else target label pair.
+     *
+     * @param label A target label.
+     * @return The other element of the pair, or <code>null</code> if <code>label</code> is not in the map.
+     */
+    public String getOtherTargetInPair(String label) {
+        return ifElseTargets.get(label);
+    }
+
+    /**
+     * Checks if the label is an else target label.
+     *
+     * @param label A target label.
+     * @return <code>true</code> if, and only if, <code>label</code> is an else target label.
+     */
+    public boolean isElseTarget(String label) {
+        return elseTargets.contains(label);
+    }
+
+    /**
+     * Checks if the label is an if target label.
+     *
+     * @param label A target label.
+     * @return <code>true</code> if, and only if, <code>label</code> is an if target label.
+     */
+    public boolean isIfTarget(String label) {
+        return hasIfElseTarget(label) && !elseTargets.contains(label);
+    }
+
+    /**
+     * A program has invalid if statements if target labels are not in a bidirectional mapping.
+     *
+     * @return <code>true</code> if, and only if, the program has invalid if statements.
+     */
+    public boolean hasInvalidIfStatements() {
+        return invalidIfStatements;
     }
 }

@@ -374,9 +374,7 @@ public class MalTranslator extends MalBaseListener {
      */
     @Override public void enterIfStatement(MalParser.IfStatementContext ctx) {
         currentInstruction.setTargetLabel(ctx.NAME().get(1).getText());
-
-        if (!translatedProgram.getIfElseTargets().containsKey(ctx.NAME().get(1).getText()))
-            translatedProgram.getIfElseTargets().put(ctx.NAME().get(1).getText(), ctx.NAME().get(0).getText());
+        translatedProgram.addIfElseTarget(ctx.NAME().get(0).getText(), ctx.NAME().get(1).getText());
     }
 
     /**

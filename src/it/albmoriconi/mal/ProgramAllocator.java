@@ -62,6 +62,7 @@ public class ProgramAllocator {
         // (i.e. the microprogram entry point).
 
         // Fifth step: set next address for remaining instructions with goto statements.
+        // At this point, unallocated code is considered unreachable.
         nextAddressForGotos(uProgram);
     }
 
@@ -104,6 +105,30 @@ public class ProgramAllocator {
     }
 
     private static void allocateIfElseTargets(TranslatedProgram uProgram, FreeChunkChain freeChunks) {
+        if (uProgram.hasInvalidIfStatements())
+            // TODO Should throw an exception?
+            return;
 
+        // TODO Refactor using an IfElseTarget class?
+        // TODO Complete allocation
+        for (TranslatedInstruction ti : uProgram.getInstructions()) {
+            String currentLabel = ti.getLabel();
+            String currentIfLabel = "";
+            String currentElseLabel = "";
+            int currentIfBlockSize = 0;
+            int currentElseBlockSize = 0;
+
+            if (ti.hasLabel() && uProgram.hasIfElseTarget(currentLabel)) {
+                if (uProgram.isElseTarget(currentLabel)) {
+                    currentElseLabel = currentLabel;
+                    currentIfLabel = uProgram.getOtherTargetInPair(currentLabel);
+                } else {
+                    currentIfLabel = currentLabel;
+                    currentElseLabel = uProgram.getOtherTargetInPair(currentLabel);
+                }
+                currentIfBlockSize++;
+                currentElseBlockSize++;
+            }
+        }
     }
 }

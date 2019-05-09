@@ -31,6 +31,12 @@ import java.io.InputStream;
  * TODO Write detailed documentation.
  */
 public class MalAssembler {
+
+    /**
+     * Default number of program words.
+     */
+    public static final int DEFAULT_PROGRAM_WORDS = 512;
+
     /**
      * Application entry point
      *
@@ -57,7 +63,7 @@ public class MalAssembler {
         MalTranslator translator = new MalTranslator();
         walker.walk(translator, tree);
 
-        ProgramAllocator.process(translator.getTranslatedProgram());
+        ProgramAllocator.process(translator.getTranslatedProgram(), DEFAULT_PROGRAM_WORDS);
         // TODO Add binary file creation
 
         for (TranslatedInstruction ti : translator.getTranslatedProgram().getInstructions()) {

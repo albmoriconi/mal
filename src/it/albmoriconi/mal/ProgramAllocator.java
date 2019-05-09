@@ -34,7 +34,10 @@ public class ProgramAllocator {
      *
      * @param uProgram The translated microprogram.
      */
-    public static void process(TranslatedProgram uProgram) {
+    public static void process(TranslatedProgram uProgram, int programWords) {
+        // Allocations during the processing have to update a free chunk map.
+        FreeChunkChain freeChunks = new FreeChunkChain(programWords);
+
         // First step: set next address for instructions with goto statements.
         // This step is only useful when goto statements are found in the source before the label
         // they targets, and these labels have explicit addresses.
@@ -46,34 +49,53 @@ public class ProgramAllocator {
         // When an allocated instruction is found, the following instructions are to be allocated
         // contiguously until (including) an instruction with a control statement is found.
         // The next address can also be set until (excluding) the same instruction.
-        allocateContiguously(uProgram);
+        allocateContiguously(uProgram, freeChunks);
 
         // Third step: solve constraints on if statements.
+        // The if target has to be allocated at an address that's exactly 256 more than the else
+        // target; therefore, two regions of adequate size have to be found at a 256-words interval.
+        allocateIfElseTargets(uProgram, freeChunks);
 
         // Fourth step: solve constraints on remaining unallocated instructions.
+        // At this point, the only instructions that can be not allocated are contiguous blocks
+        // following a label, with the exception of a contiguous block at the beginning of source
+        // (i.e. the microprogram entry point).
 
         // Fifth step: set next address for remaining instructions with goto statements.
         nextAddressForGotos(uProgram);
     }
 
-    private static void allocateContiguously(TranslatedProgram uProgram) {
+    private static void nextAddressForGotos(TranslatedProgram uProgram) {
+        for (TranslatedInstruction ti : uProgram.getInstructions()) {
+            if (!ti.hasNextAddress() && uProgram.getAllocations().containsKey(ti.getTargetLabel()))
+                ti.setNextAddress(uProgram.getAllocations().get(ti.getTargetLabel()));
+        }
+    }
+
+    private static void allocateContiguously(TranslatedProgram uProgram, FreeChunkChain freeChunks) {
         boolean contiguousAllocation = false;
-        int contiguousAddress = TranslatedInstruction.UNDETERMINED;
+        int firstAddress = TranslatedInstruction.UNDETERMINED;
+        int currentAddress = TranslatedInstruction.UNDETERMINED;
 
         for (TranslatedInstruction ti : uProgram.getInstructions()) {
             if (ti.hasAddress()) {
                 contiguousAllocation = true;
-                contiguousAddress = ti.getAddress();
+                firstAddress = ti.getAddress();
+                currentAddress = firstAddress + 1;
             } else if (contiguousAllocation) {
-                ti.setAddress(++contiguousAddress);
+                ti.setAddress(currentAddress);
 
+                // TODO Should check for label re-allocation?
                 if (ti.hasLabel())
-                    uProgram.getAllocations().put(ti.getLabel(), contiguousAddress);
+                    uProgram.getAllocations().put(ti.getLabel(), currentAddress);
 
-                // At this point, it's OK to assume that only instructions with control statement
-                // have a defined successor.
-                if (ti.hasSuccessor())
+                if (ti.hasSuccessor()) {
                     contiguousAllocation = false;
+                    // TODO Add check for errors, unless exceptions are added to reclaim()
+                    freeChunks.reclaim(firstAddress, currentAddress);
+                }
+
+                currentAddress++;
             }
 
             if (ti.hasAddress() && !ti.hasSuccessor())
@@ -81,16 +103,7 @@ public class ProgramAllocator {
         }
     }
 
-    /**
-     * Processes the program, filling the next address field for instructions with goto statements
-     * with labels with determined addresses and no next address field.
-     *
-     * @param uProgram The translated microprogram.
-     */
-    private static void nextAddressForGotos(TranslatedProgram uProgram) {
-        for (TranslatedInstruction ti : uProgram.getInstructions()) {
-            if (!ti.hasNextAddress() && uProgram.getAllocations().containsKey(ti.getTargetLabel()))
-                ti.setNextAddress(uProgram.getAllocations().get(ti.getTargetLabel()));
-        }
+    private static void allocateIfElseTargets(TranslatedProgram uProgram, FreeChunkChain freeChunks) {
+
     }
 }

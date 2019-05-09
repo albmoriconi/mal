@@ -17,8 +17,9 @@
 
 package it.albmoriconi.mal;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,9 +47,10 @@ public class TranslatedProgram {
      * Constructor.
      */
     public TranslatedProgram() {
-        instructions = new LinkedList<>();
+        instructions = new ArrayList<>();
         allocations = new HashMap<>();
         ifElseTargets = new HashMap<>();
+        elseTargets = new HashSet<>();
         invalidIfStatements = false;
     }
 
@@ -79,7 +81,7 @@ public class TranslatedProgram {
     public void addIfElseTarget(String ifLabel, String elseLabel) {
         // Preserve bidirectionality of mapping: if entry for if label is already in the map, check
         // that it's paired with the current else label.
-        if (ifElseTargets.containsKey(ifLabel)) {
+        if (!ifElseTargets.containsKey(ifLabel)) {
             ifElseTargets.put(ifLabel, elseLabel);
             ifElseTargets.put(elseLabel, ifLabel);
             elseTargets.add(elseLabel);

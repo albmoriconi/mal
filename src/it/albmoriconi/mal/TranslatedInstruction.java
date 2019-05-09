@@ -40,7 +40,7 @@ public class TranslatedInstruction {
     private int nextAddress;
     private BitSet instruction;
     private String label;
-    private String nextLabel;
+    private String targetLabel;
 
     /**
      * Conventional value to be used for undetermined addresses.
@@ -54,7 +54,7 @@ public class TranslatedInstruction {
         this.address = UNDETERMINED;
         this.nextAddress = UNDETERMINED;
         this.label = "";
-        this.nextLabel = "";
+        this.targetLabel = "";
         this.instruction = new BitSet(IBit.BIT_NUMBER);
 
         // By default, an instruction doesn't read any register on the B bus
@@ -135,21 +135,21 @@ public class TranslatedInstruction {
     }
 
     /**
-     * Getter for nextLabel.
+     * Getter for targetLabel.
      *
-     * @return The next instruction label.
+     * @return The target instruction label.
      */
-    public String getNextLabel() {
-        return nextLabel;
+    public String getTargetLabel() {
+        return targetLabel;
     }
 
     /**
-     * Setter for nextLabel.
+     * Setter for targetLabel.
      *
-     * @param nextLabel The next instruction label.
+     * @param targetLabel The target instruction label.
      */
-    public void setNextLabel(String nextLabel) {
-        this.nextLabel = nextLabel;
+    public void setTargetLabel(String targetLabel) {
+        this.targetLabel = targetLabel;
     }
 
     /**
@@ -182,9 +182,18 @@ public class TranslatedInstruction {
     /**
      * Checks if the instruction specifies a label for the next instruction.
      *
-     * @return <code>true</code> if instruction has label for the next instruction, <code>false</code> otherwise.
+     * @return <code>true</code> if instruction has label for target, <code>false</code> otherwise.
      */
-    public boolean hasNextlabel() {
-        return !nextLabel.isEmpty();
+    public boolean hasTargetLabel() {
+        return !targetLabel.isEmpty();
+    }
+
+    /**
+     * Checks if the instruction successor is already specified, in the form of an address or a label.
+     *
+     * @return <code>true</code> if instruction has determined address or label for target.
+     */
+    public boolean hasSuccessor() {
+        return hasNextAddress() || hasTargetLabel();
     }
 }

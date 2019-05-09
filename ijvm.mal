@@ -1,3 +1,6 @@
+# MIC-1 Microprogram
+# Copyright (C) 2019 Alberto Moriconi
+
         goto mic1_entry
 
 main:

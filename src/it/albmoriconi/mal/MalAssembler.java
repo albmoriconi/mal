@@ -57,7 +57,7 @@ public class MalAssembler {
         MalTranslator translator = new MalTranslator();
         walker.walk(translator, tree);
 
-        // TODO Add allocation processing
+        ProgramAllocator.process(translator.getTranslatedProgram());
         // TODO Add binary file creation
 
         for (TranslatedInstruction ti : translator.getTranslatedProgram().getInstructions()) {

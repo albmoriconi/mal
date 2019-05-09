@@ -19,6 +19,20 @@ package it.albmoriconi.mal;
 
 /**
  * Listens to events on the parsed MAL source, producing a translated program.
+ * <p>
+ * The translator:
+ * <ul>
+ *     <li>Only allocates instructions with labels with specified addresses.</li>
+ *     <li>Only sets next address for instructions with goto-mbr-expression statements.</li>
+ * </ul>
+ * The remaining addresses are to be determined separately (e.g. by a {@link ProgramAllocator}).
+ * <p>
+ * The user can however expect that:
+ * <ul>
+ *     <li>An entry for every goto, if and else target is in the translated program allocation table.
+ *     Address may be undetermined.</li>
+ *     <li>An entry for every (else, if) target pair is in the translated program if-else table.</li>
+ * </ul>
  */
 public class MalTranslator extends MalBaseListener {
 
@@ -39,15 +53,6 @@ public class MalTranslator extends MalBaseListener {
      */
     @Override public void enterUProgram(MalParser.UProgramContext ctx) {
         translatedProgram = new TranslatedProgram();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override public void exitUProgram(MalParser.UProgramContext ctx) {
-        for (TranslatedInstruction ti : translatedProgram.getInstructions())
-            if (translatedProgram.getAllocations().containsKey(ti.getNextLabel()))
-                ti.setNextAddress(translatedProgram.getAllocations().get(ti.getNextLabel()));
     }
 
     /**
@@ -344,7 +349,7 @@ public class MalTranslator extends MalBaseListener {
      * {@inheritDoc}
      */
     @Override public void enterGotoStatement(MalParser.GotoStatementContext ctx) {
-        currentInstruction.setNextLabel(ctx.NAME().getText());
+        currentInstruction.setTargetLabel(ctx.NAME().getText());
     }
 
     /**
@@ -368,7 +373,7 @@ public class MalTranslator extends MalBaseListener {
      * {@inheritDoc}
      */
     @Override public void enterIfStatement(MalParser.IfStatementContext ctx) {
-        currentInstruction.setNextLabel(ctx.NAME().get(1).getText());
+        currentInstruction.setTargetLabel(ctx.NAME().get(1).getText());
 
         if (!translatedProgram.getIfElseTargets().containsKey(ctx.NAME().get(1).getText()))
             translatedProgram.getIfElseTargets().put(ctx.NAME().get(1).getText(), ctx.NAME().get(0).getText());

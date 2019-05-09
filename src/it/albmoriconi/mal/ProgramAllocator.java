@@ -18,7 +18,7 @@
 package it.albmoriconi.mal;
 
 /**
- * Determines the address fields for a translated microprogram.
+ * Offers functionality to determine the address fields for a translated microprogram.
  * <p>
  * The translation of a microprogram source code does not contain all information on instruction
  * address and next instruction address.
@@ -26,67 +26,71 @@ package it.albmoriconi.mal;
  * branches).
  */
 public class ProgramAllocator {
-    /**
-     * The translated microprogram.
-     */
-    private TranslatedProgram uProgram;
 
-    /**
-     * Constructor.
-     *
-     * @param uProgram The translated microprogram.
-     */
-    public ProgramAllocator(TranslatedProgram uProgram) {
-        this.uProgram = uProgram;
-    }
+    private ProgramAllocator() { }
 
     /**
      * Processes the microprogram, filling the missing address fields.
+     *
+     * @param uProgram The translated microprogram.
      */
-    public void process() {
+    public static void process(TranslatedProgram uProgram) {
+        // First step: set next address for instructions with goto statements.
+        // This step is only useful when goto statements are found in the source before the label
+        // they targets, and these labels have explicit addresses.
+        // It often produces no results: in microprograms usually only instructions have explicit
+        // addresses, and entire instructions are rarely targets for gotos.
+        nextAddressForGotos(uProgram);
+
+        // Second step: contiguous allocation of instruction blocks.
+        // When an allocated instruction is found, the following instructions are to be allocated
+        // contiguously until (including) an instruction with a control statement is found.
+        // The next address can also be set until (excluding) the same instruction.
+        allocateContiguously(uProgram);
+
+        // Third step: solve constraints on if statements.
+
+        // Fourth step: solve constraints on remaining unallocated instructions.
+
+        // Fifth step: set next address for remaining instructions with goto statements.
+        nextAddressForGotos(uProgram);
+    }
+
+    private static void allocateContiguously(TranslatedProgram uProgram) {
         boolean contiguousAllocation = false;
-        int previousAddress = TranslatedInstruction.UNDETERMINED;
+        int contiguousAddress = TranslatedInstruction.UNDETERMINED;
 
-        // TODO Complete location assignment
-        // First pass: solve contraints on contiguous allocations
-        // Scan program
         for (TranslatedInstruction ti : uProgram.getInstructions()) {
-            // On finding an instruction that is already allocated
-            if (ti.getAddress() >= 0) {
-                // start a contiguous allocation
+            if (ti.hasAddress()) {
                 contiguousAllocation = true;
-                previousAddress = ti.getAddress();
-            } else {
-                // otherwise, instruction is not already allocated
-                // if we are in a contiguous allocation
-                if (contiguousAllocation) {
-                    // and there's no label, we can allocate
-                    // TODO should be: if there's no ENTRY IN IF TABLE
-                    if (ti.getLabel().isEmpty()) {
-                        ti.setAddress(previousAddress + 1);
-                        previousAddress = ti.getAddress();
-                    } else {
-                        // otherwise stop contiguous allocation
-                        contiguousAllocation = false;
-                    }
-                }
+                contiguousAddress = ti.getAddress();
+            } else if (contiguousAllocation) {
+                ti.setAddress(++contiguousAddress);
+
+                if (ti.hasLabel())
+                    uProgram.getAllocations().put(ti.getLabel(), contiguousAddress);
+
+                // At this point, it's OK to assume that only instructions with control statement
+                // have a defined successor.
+                if (ti.hasSuccessor())
+                    contiguousAllocation = false;
             }
 
-            // Iny case, if instruction is now allocated and has no next label
-            if (ti.getAddress() >= 0 && ti.getNextLabel().isEmpty()) {
-                // next address is current address + 1
+            if (ti.hasAddress() && !ti.hasSuccessor())
                 ti.setNextAddress(ti.getAddress() + 1);
-            }
         }
+    }
 
-        // Second pass: solve costraints on ifs
-
-        // Third pass: solve contraints on remaining unallocated instructions
-
-        // Last pass: labeled gotos
+    /**
+     * Processes the program, filling the next address field for instructions with goto statements
+     * with labels with determined addresses and no next address field.
+     *
+     * @param uProgram The translated microprogram.
+     */
+    private static void nextAddressForGotos(TranslatedProgram uProgram) {
         for (TranslatedInstruction ti : uProgram.getInstructions()) {
-            if (uProgram.getAllocations().containsKey(ti.getNextLabel()))
-                ti.setNextAddress(uProgram.getAllocations().get(ti.getNextLabel()));
+            if (!ti.hasNextAddress() && uProgram.getAllocations().containsKey(ti.getTargetLabel()))
+                ti.setNextAddress(uProgram.getAllocations().get(ti.getTargetLabel()));
         }
     }
 }

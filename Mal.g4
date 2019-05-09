@@ -1,3 +1,6 @@
+// Grammar for MIC-1 Micro Assembly Language
+// Copyright (C) 2019 Alberto Moriconi
+
 grammar Mal;
 
 uProgram : instruction*;

@@ -31,6 +31,7 @@ public class FreeChunkChain {
 
     private List<FreeChunk> freeChunks;
 
+
     /**
      * Constructor.
      *
@@ -101,5 +102,25 @@ public class FreeChunkChain {
         }
 
         return canBeReclaimed;
+    }
+
+    /**
+     * Gets the first free address of the first chank of the chain.
+     *
+     * @return The first free address of the first chank of the chain.
+     */
+    public int firstFree() {
+        return freeChunks.get(0).getStartAddress();
+    }
+
+
+    /**
+     * Gets the last free address of the last chunk of the chain.
+     *
+     * @return The last free address of the last chunk of the chain.
+     */
+    public int lastFree() {
+        // TODO Implement
+        return 512;
     }
 }

@@ -10,7 +10,7 @@ instruction : label? statementSequence;
 label : NAME ('=' ADDRESS)? ':';
 
 statementSequence : EMPTY_STATEMENT
-                  | HALT_STATEMENT
+                  | haltStatement
                   | assignmentStatement (';' memoryStatement)? (';' controlStatement)?
                   | memoryStatement (';' controlStatement)?
                   | controlStatement
@@ -102,6 +102,8 @@ mbrExpr : 'MBR' 'OR' ADDRESS
         ;
 
 ifStatement : 'if' '(' condition ')' 'goto' NAME ';' 'else' 'goto' NAME;
+
+haltStatement : HALT_STATEMENT;
 
 EMPTY_STATEMENT : 'empty';
 HALT_STATEMENT : 'halt';

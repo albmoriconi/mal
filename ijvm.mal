@@ -9,12 +9,12 @@ main:
 nop = 0x00:
         goto main
 
-iadd = 0x60:
+iadd = 0x65:
         MAR = SP = SP - 1; rd
         H = TOS
         MDR = TOS = MDR + H; wr; goto main
 
-isub = 0x64:
+isub = 0x5C:
         MAR = SP = SP - 1; rd
         H = TOS
         MDR = TOS = MDR - H; wr; goto main
@@ -24,16 +24,16 @@ iand = 0x7E:
         H = TOS
         MDR = TOS = MDR AND H; wr; goto main
 
-ior = 0x80:
+ior = 0xB6:
         MAR = SP = SP - 1; rd
         H = TOS
         MDR = TOS = MDR OR H; wr; goto main
 
-dup = 0x59:
+dup = 0x57:
         MAR = SP = SP + 1
         MDR = TOS; wr; goto main
 
-pop = 0x57:
+pop = 0x59:
         MAR = SP = SP - 1; rd
         empty
         TOS = MDR; goto main
@@ -68,7 +68,7 @@ istore_cont:
         PC = PC + 1; fetch
         TOS = MDR; goto main
 
-wide = 0xC4:
+wide = 0xCF:
         PC = PC + 1; fetch; goto (MBR OR 0x100)
 
 wide_iload = 0x115:
@@ -83,7 +83,7 @@ wide_istore = 0x136:
         H = MBRU OR H
         MAR = LV + H; goto istore_cont
 
-ldc_w = 0x13:
+ldc_w = 0x20:
         PC = PC + 1; fetch
         H = MBRU << 8
         H = MBRU OR H
@@ -106,7 +106,7 @@ goto_cont:
         PC = OPC + H; fetch
         goto main
 
-iflt = 0x9B:
+iflt = 0x9D:
         MAR = SP = SP - 1; rd
         OPC = TOS
         TOS = MDR
@@ -118,7 +118,7 @@ ifeq = 0x99:
         TOS = MDR
         Z = OPC; if (Z) goto T; else goto F
 
-if_icmpeq = 0x9F:
+if_icmpeq = 0xA1:
         MAR = SP = SP - 1; rd
         MAR = SP = SP - 1
         H = MDR; rd
@@ -134,7 +134,7 @@ F:
         PC = PC + 1; fetch
         goto main
 
-invokevirtual = 0xB6:
+invokevirtual = 0xB9:
         PC = PC + 1; fetch
         H = MBRU << 8
         H = MBRU OR  H
@@ -159,7 +159,7 @@ mic1_entry:
         PC = PC + 1; fetch
         LV = TOS; goto main
 
-ireturn = 0xAC:
+ireturn = 0xAD:
         MAR = SP = LV; rd
         empty
         LV = MAR = MDR; rd

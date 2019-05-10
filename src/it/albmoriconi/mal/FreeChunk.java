@@ -37,6 +37,15 @@ public class FreeChunk {
     }
 
     /**
+     * Returns the size of the chunk.
+     *
+     * @return The size of the chunk.
+     */
+    public int size() {
+        return endAddress - startAddress + 1;
+    }
+
+    /**
      * Checks if an address belongs to the chunk.
      *
      * @param address An address.
@@ -65,6 +74,16 @@ public class FreeChunk {
      */
     public boolean startsAfter(int address) {
         return getStartAddress() > address;
+    }
+
+    /**
+     * Checks if the chunk starts before given address.
+     *
+     * @param address An address.
+     * @return <code>true</code> if, and only if, the chunk starts before <code>address</code>.
+     */
+    public boolean startsBefore(int address) {
+        return getStartAddress() < address;
     }
 
     /**

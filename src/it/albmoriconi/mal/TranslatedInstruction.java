@@ -38,6 +38,7 @@ public class TranslatedInstruction {
 
     private int address;
     private int nextAddress;
+    private boolean isHalt;
     private BitSet instruction;
     private String label;
     private String targetLabel;
@@ -53,6 +54,7 @@ public class TranslatedInstruction {
     public TranslatedInstruction() {
         this.address = UNDETERMINED;
         this.nextAddress = UNDETERMINED;
+        this.isHalt = false;
         this.label = "";
         this.targetLabel = "";
         this.instruction = new BitSet(IBit.BIT_NUMBER);
@@ -114,6 +116,24 @@ public class TranslatedInstruction {
      */
     public void setInstruction(BitSet instruction) {
         this.instruction = instruction;
+    }
+
+    /**
+     * Getter for the isHalt property.
+     *
+     * @return <code>true</code> if, and only if, the instruction is an <code>halt</code>.
+     */
+    public boolean isHalt() {
+        return isHalt;
+    }
+
+    /**
+     * Setter for the isHalt property.
+     *
+     * @param isHalt The value for isHalt.
+     */
+    public void setIsHalt(boolean isHalt) {
+        this.isHalt = isHalt;
     }
 
     /**

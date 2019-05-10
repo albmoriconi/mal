@@ -17,12 +17,7 @@
 
 package it.albmoriconi.mal;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Contains the translated microprogram.
@@ -31,27 +26,34 @@ import java.util.Set;
  * additional processing, are:
  * <ul>
  *     <li>The translation of the instructions</li>
- *     <li>The allocation of instructions with labels and specified addresses</li>
- *     <li>The pairs of if/else target labels</li>
+ *     <li>The allocation of instructions with addressForLabel and specified addresses</li>
+ *     <li>The pairs of if/else target addressForLabel</li>
  * </ul>
  */
 public class TranslatedProgram {
 
+    // TODO Add methods for puts/gets/etc. instead of field accessors?
     private List<TranslatedInstruction> instructions;
-    private Map<String, Integer> allocations;
+    private Map<String, Integer> addressForLabel;
+    private Map<String, Integer> countForLabel;
     private Map<String, String> ifElseTargets;
     private Set<String> elseTargets;
     private boolean invalidIfStatements;
+    private List<FreeChunk> reclaimPromises;
+    private Map<Integer, Integer> blockAnnotations;
 
     /**
      * Constructor.
      */
     public TranslatedProgram() {
         instructions = new ArrayList<>();
-        allocations = new HashMap<>();
+        addressForLabel = new HashMap<>();
+        countForLabel = new HashMap<>();
         ifElseTargets = new HashMap<>();
         elseTargets = new HashSet<>();
         invalidIfStatements = false;
+        reclaimPromises = new LinkedList<>();
+        blockAnnotations = new HashMap<>();
     }
 
     /**
@@ -64,34 +66,73 @@ public class TranslatedProgram {
     }
 
     /**
-     * Getter for allocations.
+     * Getter for addressForLabel.
      *
-     * @return The allocation of instructions with labels and specified addresses.
-     *         The key is the label, the value is the address.
+     * @return A map where the key is the label, the value is the address (can be undetermined).
      */
-    public Map<String, Integer> getAllocations() {
-        return allocations;
+    public Map<String, Integer> getAddressForLabel() {
+        return addressForLabel;
+    }
+
+    /**
+     * Getter for countForLabel.
+     *
+     * @return A map where the key is the label, the value is the count in the source.
+     */
+    public Map<String, Integer> getCountForLabel() {
+        return countForLabel;
+    }
+
+    /**
+     * Getter for reclaimPromises
+     *
+     * @return A list of chunks that have to be reclaimed by the allocator. Is valid if source is valid.
+     */
+    public List<FreeChunk> getReclaimPromises() {
+        return reclaimPromises;
+    }
+
+    /**
+     * Getter for blockAnnotations
+     *
+     * @return A map where the key is the instruction count (relative to source) and the value the size of block.
+     */
+    public Map<Integer, Integer> getBlockAnnotations() {
+        return blockAnnotations;
     }
 
     /**
      * Add if/else target pairs to the map.
      * <p>
      * The map is bidirectional, i.e. uniqueness of both keys and values is preserved.
+     * This means that statement <code>if (cond) goto l1; else goto l2;</code> in the source enforces
+     * that <code>l1</code> is never used as an else target, <code>l2</code> is never used as an if
+     * target, and every time they're used as if/else targets they're paired together.
      */
     public void addIfElseTarget(String ifLabel, String elseLabel) {
-        // Preserve bidirectionality of mapping: if entry for if label is already in the map, check
-        // that it's paired with the current else label.
-        if (!ifElseTargets.containsKey(ifLabel)) {
+        // Preserve bidirectionality of mapping
+        if (labelsAreNewTargets(ifLabel, elseLabel)) {
+            // If both labels appear as if/else targets for the first time, create entries
             ifElseTargets.put(ifLabel, elseLabel);
             ifElseTargets.put(elseLabel, ifLabel);
             elseTargets.add(elseLabel);
-        } else if (!ifElseTargets.get(ifLabel).equals(elseLabel)) {
+        } else if (!labelsArePairedTogether(ifLabel, elseLabel)) {
+            // If one (or both) are already in the map, but they're not paired together, source is invalid
             invalidIfStatements = true;
         }
     }
 
+    private boolean labelsArePairedTogether(String ifLabel, String elseLabel) {
+        // Note that this method returns false if both labels are not if/else targets
+        return ifElseTargets.containsKey(ifLabel) && ifElseTargets.get(ifLabel).equals(elseLabel);
+    }
+
+    private boolean labelsAreNewTargets(String ifLabel, String elseLabel) {
+        return !ifElseTargets.containsKey(ifLabel) && !ifElseTargets.containsKey(elseLabel);
+    }
+
     /**
-     * Checks if the label is in an if/else target label pair.
+     * Checks if the label is an if or else target label.
      *
      * @param label A target label.
      * @return <code>true</code> if, and only if, <code>label</code> is in the map.

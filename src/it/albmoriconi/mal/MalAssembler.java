@@ -63,11 +63,11 @@ public class MalAssembler {
         MalTranslator translator = new MalTranslator();
         walker.walk(translator, tree);
 
-        ProgramAllocator.process(translator.getTranslatedProgram(), DEFAULT_PROGRAM_WORDS);
+        MalAllocator.process(translator.getTranslatedProgram(), DEFAULT_PROGRAM_WORDS);
         // TODO Add binary file creation
 
         for (TranslatedInstruction ti : translator.getTranslatedProgram().getInstructions()) {
-            System.out.format("%3d : [%3d | %s]%n",
+            System.out.format("0x%03X : [0x%03X | %s]%n",
                     ti.getAddress(), ti.getNextAddress(), ti.getInstruction());
         }
     }

@@ -20,24 +20,38 @@ package it.albmoriconi.mal;
 /**
  * Listens to events on the parsed MAL source, producing a translated program.
  * <p>
- * The translator:
+ * The translator traverses the source only once, so it:
  * <ul>
- *     <li>Only allocates instructions with labels with specified addresses.</li>
+ *     <li>Only allocates (determines address for) contiguous blocks, i.e. one or more consecutive
+ *     instruction, where:
+ *     <ul>
+ *         <li>The first is labeled with explicit address.</li>
+ *         <li>The last contains a control statement.</li>
+ *     </ul>
  *     <li>Only sets next address for instructions with goto-mbr-expression statements.</li>
  * </ul>
- * The remaining addresses are to be determined separately (e.g. by a {@link ProgramAllocator}).
  * <p>
  * The user can however expect that:
  * <ul>
- *     <li>An entry for every goto, if and else target is in the translated program allocation table.
- *     Address may be undetermined.</li>
- *     <li>An entry for every (else, if) target pair is in the translated program if-else table.</li>
+ *     <li>An entry for every label is in the translated program allocation table.</li>
+ *     <li>An entry for every if/else target pair is in the translated if/else bidirectional map.</li>
+ *     <li>A reclaim promise is made for every block allocated contiguosly.</li>
+ *     <li>A block annotation is made for every block without explicit starting address.</li>
  * </ul>
+ * The remaining allocations and next addresses are determined separately (e.g. by a {@link MalAllocator}).
  */
 public class MalTranslator extends MalBaseListener {
 
     private TranslatedInstruction currentInstruction;
     private TranslatedProgram translatedProgram;
+
+    private boolean inContiguousAllocation;
+    private int reclaimedBlockStart;
+    private int reclaimedBlockEnd;
+
+    private boolean inBlockAnnotation;
+    private int blockStartInstruction;
+    private int blockSize;
 
     /**
      * Getter for translatedProgram.
@@ -53,6 +67,25 @@ public class MalTranslator extends MalBaseListener {
      */
     @Override public void enterUProgram(MalParser.UProgramContext ctx) {
         translatedProgram = new TranslatedProgram();
+        inContiguousAllocation = false;
+        reclaimedBlockStart = TranslatedInstruction.UNDETERMINED;
+        reclaimedBlockEnd = TranslatedInstruction.UNDETERMINED;
+        inBlockAnnotation = true; // Start in block annotation for entry point
+        blockStartInstruction = 0;
+        blockSize = 1;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override public void exitUProgram(MalParser.UProgramContext ctx) {
+        if (inContiguousAllocation) {
+            inContiguousAllocation = false;
+            translatedProgram.getReclaimPromises().add(new FreeChunk(reclaimedBlockStart, reclaimedBlockEnd - 1));
+        } else if (inBlockAnnotation) {
+            inBlockAnnotation = false;
+            translatedProgram.getBlockAnnotations().put(blockStartInstruction, blockSize - 1);
+        }
     }
 
     /**
@@ -60,12 +93,20 @@ public class MalTranslator extends MalBaseListener {
      */
     @Override public void enterInstruction(MalParser.InstructionContext ctx) {
         currentInstruction = new TranslatedInstruction();
+
+        if (inContiguousAllocation)
+            currentInstruction.setAddress(reclaimedBlockEnd);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void exitInstruction(MalParser.InstructionContext ctx) {
+        if (inContiguousAllocation)
+            currentInstruction.setNextAddress(++reclaimedBlockEnd);
+        else if (inBlockAnnotation)
+            ++blockSize;
+
         translatedProgram.getInstructions().add(currentInstruction);
     }
 
@@ -75,11 +116,30 @@ public class MalTranslator extends MalBaseListener {
     @Override public void enterLabel(MalParser.LabelContext ctx) {
         currentInstruction.setLabel(ctx.NAME().getText());
 
-        if (ctx.ADDRESS() != null)
+        if (ctx.ADDRESS() != null) {
+            // Start a contiguous allocation
             currentInstruction.setAddress(Integer.decode(ctx.ADDRESS().getText()));
+            inContiguousAllocation = true;
+            reclaimedBlockStart = currentInstruction.getAddress();
+            reclaimedBlockEnd = reclaimedBlockStart;
 
-        if (!translatedProgram.getAllocations().containsKey(currentInstruction.getLabel()))
-            translatedProgram.getAllocations().put(currentInstruction.getLabel(), currentInstruction.getAddress());
+            // TODO Consider allowing contiguous allocation during block annotation
+            // This is tricky, because addresses for the annotated block became determined.
+            // For now, just drop it: it's always possible to end the block with a goto the
+            // next instruction instead of letting it fall through.
+            inBlockAnnotation = false;
+        } else {
+            // Start a block annotation
+            inBlockAnnotation = true;
+            blockStartInstruction = translatedProgram.getInstructions().size();
+            blockSize = 1;
+        }
+
+        if (!translatedProgram.getAddressForLabel().containsKey(currentInstruction.getLabel()))
+            translatedProgram.getAddressForLabel().put(currentInstruction.getLabel(), currentInstruction.getAddress());
+
+        if (!translatedProgram.getCountForLabel().containsKey(currentInstruction.getLabel()))
+            translatedProgram.getCountForLabel().put(currentInstruction.getLabel(), translatedProgram.getInstructions().size());
     }
 
     /**
@@ -348,6 +408,19 @@ public class MalTranslator extends MalBaseListener {
     /**
      * {@inheritDoc}
      */
+    @Override public void enterControlStatement(MalParser.ControlStatementContext ctx) {
+        if (inContiguousAllocation) {
+            inContiguousAllocation = false;
+            translatedProgram.getReclaimPromises().add(new FreeChunk(reclaimedBlockStart, reclaimedBlockEnd));
+        } else if (inBlockAnnotation) {
+            inBlockAnnotation = false;
+            translatedProgram.getBlockAnnotations().put(blockStartInstruction, blockSize);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override public void enterGotoStatement(MalParser.GotoStatementContext ctx) {
         currentInstruction.setTargetLabel(ctx.NAME().getText());
     }
@@ -385,5 +458,12 @@ public class MalTranslator extends MalBaseListener {
             currentInstruction.getInstruction().set(IBit.JAMN.getBitIndex());
         else if (ctx.getText().equals("Z"))
             currentInstruction.getInstruction().set(IBit.JAMZ.getBitIndex());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override public void enterHaltStatement(MalParser.HaltStatementContext ctx) {
+        currentInstruction.setIsHalt(true);
     }
 }

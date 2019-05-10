@@ -17,6 +17,7 @@
 
 package it.albmoriconi.mal;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -31,6 +32,20 @@ public class FreeChunkChain {
 
     private List<FreeChunk> freeChunks;
 
+    /**
+     * Index of the start of else block allocation in the list returned by {@link #getChunkPairGt}.
+     */
+    public static final int ELSE_START_I = 0;
+
+    /**
+     * Index of the start of if block allocation in the list returned by {@link #getChunkPairGt}.
+     */
+    public static final int IF_START_I = 1;
+
+    /**
+     * Address returned when a chunk request can't be satisfied
+     */
+    public static final int NO_SUCH_ADDRESS = -1;
 
     /**
      * Constructor.
@@ -105,22 +120,67 @@ public class FreeChunkChain {
     }
 
     /**
-     * Gets the first free address of the first chank of the chain.
+     * Gets a chunk that's at least of size <code>blockSize</code>.
      *
-     * @return The first free address of the first chank of the chain.
+     * @param blockSize The desired size.
+     * @return The starting address of a chunk that's at least of size <code>blockSize</code>.
      */
-    public int firstFree() {
-        return freeChunks.get(0).getStartAddress();
+    public int getChunkGt(int blockSize) {
+        for (FreeChunk fc : freeChunks) {
+            if (fc.size() >= blockSize)
+                return fc.getStartAddress();
+        }
+
+        return TranslatedInstruction.UNDETERMINED;
     }
 
-
     /**
-     * Gets the last free address of the last chunk of the chain.
+     * Gets a pair of chunks according to size and displacement rules.
      *
-     * @return The last free address of the last chunk of the chain.
+     * @param blockSize1 Size of first block.
+     * @param blockSize2 Size of second block.
+     * @param displacement Displacement between allocation of the two blocks.
+     * @return The starting addresses of a pair of chunks that satisfy conditions on size and displacement.
      */
-    public int lastFree() {
-        // TODO Implement
-        return 512;
+    public List<Integer> getChunkPairGt(int blockSize1, int blockSize2, int displacement) {
+        List<Integer> thePair = new ArrayList<>();
+        thePair.add(NO_SUCH_ADDRESS);
+        thePair.add(NO_SUCH_ADDRESS);
+
+        // TODO We iterate twice on the entire list, but ArrayList is probably not an option
+        for (FreeChunk elseChunk : freeChunks) {
+            if (elseChunk.size() >= blockSize1) {
+                // Look for another possible block
+                for (FreeChunk ifChunk : freeChunks) {
+                    // If e.g. elseChunk = [5, 9], bs1 = 3, disp = 50 then block in ifChunk can start at 55, 56 or 57
+                    int block2StartLower = elseChunk.getStartAddress() + displacement;
+                    int block2StartUpper = block2StartLower + blockSize1 - 1;
+
+                    // If we are behind or after this window, current chunk is no good
+                    if (ifChunk.getEndAddress() < block2StartLower)
+                        continue;
+                    else if (ifChunk.getStartAddress() > block2StartUpper)
+                        break;
+
+                    // Otherwise, we also have to check size
+                    for (int i = block2StartLower; i <= block2StartUpper; i++) {
+                        if (ifChunk.contains(i, i + blockSize2)) {
+                            // Ok, we found a pair
+                            thePair.set(ELSE_START_I, elseChunk.getStartAddress());
+                            thePair.set(IF_START_I, ifChunk.getStartAddress());
+
+                            if (ifChunk.getStartAddress() > block2StartLower)
+                                thePair.set(ELSE_START_I, ifChunk.getStartAddress() - displacement);
+                            else if (ifChunk.getStartAddress() < block2StartLower)
+                                thePair.set(IF_START_I, elseChunk.getStartAddress() + displacement);
+
+                            return thePair;
+                        }
+                    }
+                }
+            }
+        }
+
+        return thePair;
     }
 }

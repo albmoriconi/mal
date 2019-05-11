@@ -28,9 +28,9 @@ import java.io.InputStream;
 /**
  * Assembles input MAL source code.
  * <p>
- * TODO Write detailed documentation.
+ * The assembler currently parses the input source and outputs a text file, to be used with HDL tools.
  */
-public class MalAssembler {
+public class Assembler {
 
     /**
      * Default number of program words.
@@ -41,9 +41,10 @@ public class MalAssembler {
      * Application entry point
      *
      * @param args Command line arguments.
-     * @throws Exception TODO Throw specific exceptions
+     * @throws Exception Generic processing exception.
      */
     public static void main(String[] args) throws Exception {
+        // TODO Add exception handling
         InputStream inputStream = System.in;
 
         String inputFile = null;
@@ -60,11 +61,12 @@ public class MalAssembler {
         ParseTree tree = parser.uProgram();
 
         ParseTreeWalker walker = new ParseTreeWalker();
-        MalTranslator translator = new MalTranslator();
+        Translator translator = new Translator();
         walker.walk(translator, tree);
 
-        MalAllocator.process(translator.getTranslatedProgram(), DEFAULT_PROGRAM_WORDS);
+        Allocator.process(translator.getTranslatedProgram(), DEFAULT_PROGRAM_WORDS);
         // TODO Add binary file creation
+        TextPrinter.printProgram(translator.getTranslatedProgram(), DEFAULT_PROGRAM_WORDS, "a.out");
 
         for (TranslatedInstruction ti : translator.getTranslatedProgram().getInstructions()) {
             System.out.format("0x%03X : [0x%03X | %s]%n",

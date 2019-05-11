@@ -18,9 +18,9 @@
 package it.albmoriconi.mal;
 
 /**
- * Enumerates the bits in a microinstruction.
+ * Enumerates the control bits in a microinstruction.
  */
-public enum IBit {
+public enum CBit {
     B_0(0),
     B_1(1),
     B_2(2),
@@ -52,16 +52,11 @@ public enum IBit {
     private final int bitIndex;
 
     /**
-     * Number of bits in a microinstruction (excluding next address field).
-     */
-    public static final int BIT_NUMBER = 27;
-
-    /**
      * Constructor.
      *
      * @param bitIndex The index of the bit in the instruction.
      */
-    IBit(int bitIndex) {
+    CBit(int bitIndex) {
         this.bitIndex = bitIndex;
     }
 

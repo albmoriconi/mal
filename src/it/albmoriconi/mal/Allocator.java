@@ -26,11 +26,11 @@ import java.util.List;
  * address and next instruction address. They have to be determined based on a series of constraints
  * (e.g. distance between if/else branches).
  */
-public class MalAllocator {
+public class Allocator {
 
     private static final int IF_ELSE_DISPLACEMENT = 256;
 
-    private MalAllocator() { }
+    private Allocator() { }
 
     /**
      * Processes the microprogram, filling the missing address fields.

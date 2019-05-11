@@ -49,6 +49,21 @@ public class TranslatedInstruction {
     public static int UNDETERMINED = -1;
 
     /**
+     * Address fields length
+     */
+    public static int NEXT_ADDRESS_FIELD_LENGTH = 9;
+
+    /**
+     * Number of bits in a microinstruction (excluding next address field).
+     */
+    public static final int CONTROL_FIELD_LENGTH = 27;
+
+    /**
+     * Number of bits in a microinstruction.
+     */
+    public static final int INSTRUCTION_LENGTH = NEXT_ADDRESS_FIELD_LENGTH + CONTROL_FIELD_LENGTH;
+
+    /**
      * Constructor.
      */
     public TranslatedInstruction() {
@@ -57,10 +72,10 @@ public class TranslatedInstruction {
         this.isHalt = false;
         this.label = "";
         this.targetLabel = "";
-        this.instruction = new BitSet(IBit.BIT_NUMBER);
+        this.instruction = new BitSet(CONTROL_FIELD_LENGTH);
 
         // By default, an instruction doesn't read any register on the B bus
-        this.instruction.set(IBit.B_0.getBitIndex(), IBit.B_3.getBitIndex());
+        this.instruction.set(CBit.B_0.getBitIndex(), CBit.B_3.getBitIndex());
     }
 
     /**

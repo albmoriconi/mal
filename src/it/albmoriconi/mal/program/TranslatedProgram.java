@@ -15,9 +15,17 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package it.albmoriconi.mal;
+package it.albmoriconi.mal.program;
 
-import java.util.*;
+import it.albmoriconi.mal.memory.FreeChunk;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Contains the translated microprogram.

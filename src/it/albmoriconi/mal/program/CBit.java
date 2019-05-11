@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package it.albmoriconi.mal;
+package it.albmoriconi.mal.program;
 
 /**
  * Enumerates the control bits in a microinstruction.

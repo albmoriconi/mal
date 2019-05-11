@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package it.albmoriconi.mal;
+package it.albmoriconi.mal.memory;
 
 /**
  * Represents a contiguous chunk of memory in the program store.
@@ -31,7 +31,7 @@ public class FreeChunk {
      * @param startAddress First address of the chunk.
      * @param endAddress Last address of the chunk.
      */
-    FreeChunk(int startAddress, int endAddress) {
+    public FreeChunk(int startAddress, int endAddress) {
         this.setStartAddress(startAddress);
         this.setEndAddress(endAddress);
     }

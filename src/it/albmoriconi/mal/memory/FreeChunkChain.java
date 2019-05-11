@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package it.albmoriconi.mal;
+package it.albmoriconi.mal.memory;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -131,7 +131,7 @@ public class FreeChunkChain {
                 return fc.getStartAddress();
         }
 
-        return TranslatedInstruction.UNDETERMINED;
+        return NO_SUCH_ADDRESS;
     }
 
     /**

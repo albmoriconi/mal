@@ -17,6 +17,13 @@
 
 package it.albmoriconi.mal;
 
+import it.albmoriconi.mal.antlr.MalBaseListener;
+import it.albmoriconi.mal.antlr.MalParser;
+import it.albmoriconi.mal.memory.FreeChunk;
+import it.albmoriconi.mal.program.CBit;
+import it.albmoriconi.mal.program.TranslatedInstruction;
+import it.albmoriconi.mal.program.TranslatedProgram;
+
 /**
  * Listens to events on the parsed MAL source, producing a translated program.
  * <p>

@@ -17,6 +17,9 @@
 
 package it.albmoriconi.mal;
 
+import it.albmoriconi.mal.program.TranslatedInstruction;
+import it.albmoriconi.mal.program.TranslatedProgram;
+
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -56,7 +59,7 @@ public class TextPrinter {
             String instructionText = "";
 
             if (ci != null) {
-                String nextAddressFormat = "%" + Integer.toString(TranslatedInstruction.NEXT_ADDRESS_FIELD_LENGTH) + "s";
+                String nextAddressFormat = "%" + TranslatedInstruction.NEXT_ADDRESS_FIELD_LENGTH + "s";
                 String nextAddress = Integer.toBinaryString(controlStoreMapping.get(i).getNextAddress());
 
                 if (nextAddress.length() > TranslatedInstruction.NEXT_ADDRESS_FIELD_LENGTH)

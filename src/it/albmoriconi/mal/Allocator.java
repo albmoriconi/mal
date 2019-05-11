@@ -17,6 +17,11 @@
 
 package it.albmoriconi.mal;
 
+import it.albmoriconi.mal.memory.FreeChunk;
+import it.albmoriconi.mal.memory.FreeChunkChain;
+import it.albmoriconi.mal.program.TranslatedInstruction;
+import it.albmoriconi.mal.program.TranslatedProgram;
+
 import java.util.List;
 
 /**

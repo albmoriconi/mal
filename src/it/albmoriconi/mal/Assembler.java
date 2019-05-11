@@ -17,10 +17,13 @@
 
 package it.albmoriconi.mal;
 
+import it.albmoriconi.mal.antlr.MalLexer;
+import it.albmoriconi.mal.antlr.MalParser;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.*;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -32,10 +35,7 @@ import java.io.InputStream;
  */
 public class Assembler {
 
-    /**
-     * Default number of program words.
-     */
-    public static final int DEFAULT_PROGRAM_WORDS = 512;
+    private static final int DEFAULT_PROGRAM_WORDS = 512;
 
     /**
      * Application entry point
@@ -64,13 +64,8 @@ public class Assembler {
         Translator translator = new Translator();
         walker.walk(translator, tree);
 
-        Allocator.process(translator.getTranslatedProgram(), DEFAULT_PROGRAM_WORDS);
         // TODO Add binary file creation
+        Allocator.process(translator.getTranslatedProgram(), DEFAULT_PROGRAM_WORDS);
         TextPrinter.printProgram(translator.getTranslatedProgram(), DEFAULT_PROGRAM_WORDS, "a.out");
-
-        for (TranslatedInstruction ti : translator.getTranslatedProgram().getInstructions()) {
-            System.out.format("0x%03X : [0x%03X | %s]%n",
-                    ti.getAddress(), ti.getNextAddress(), ti.getInstruction());
-        }
     }
 }

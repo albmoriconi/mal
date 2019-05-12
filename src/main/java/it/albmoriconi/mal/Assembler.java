@@ -65,7 +65,7 @@ public class Assembler {
         walker.walk(translator, tree);
 
         // TODO Add binary file creation
-        Allocator.process(translator.getTranslatedProgram(), DEFAULT_PROGRAM_WORDS);
-        TextPrinter.printProgram(translator.getTranslatedProgram(), DEFAULT_PROGRAM_WORDS, "a.out");
+        Allocator.process(translator.getProgram());
+        TextPrinter.printProgram(translator.getProgram(), DEFAULT_PROGRAM_WORDS, "a.out");
     }
 }

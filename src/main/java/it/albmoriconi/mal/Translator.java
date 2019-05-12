@@ -19,38 +19,37 @@ package it.albmoriconi.mal;
 
 import it.albmoriconi.mal.antlr.MalBaseListener;
 import it.albmoriconi.mal.antlr.MalParser;
-import it.albmoriconi.mal.memory.FreeChunk;
 import it.albmoriconi.mal.program.CBit;
-import it.albmoriconi.mal.program.TranslatedInstruction;
-import it.albmoriconi.mal.program.TranslatedProgram;
+import it.albmoriconi.mal.program.Instruction;
+import it.albmoriconi.mal.program.Program;
 
 /**
  * Listens to events on the parsed MAL source, producing a translated program.
  * <p>
  * The translator traverses the source only once, so it:
  * <ul>
- *     <li>Only allocates (determines address for) contiguous blocks, i.e. one or more consecutive
- *     instruction, where:
+ *     <li>Only allocates (determines addresses for) for blocks of consecutive instructions where:
  *     <ul>
- *         <li>The first is labeled with explicit address.</li>
+ *         <li>The first has a placement label.</li>
  *         <li>The last contains a control statement.</li>
  *     </ul>
- *     <li>Only sets next address for instructions with goto-mbr-expression statements.</li>
+ *     <li>Only sets next address for instructions with <code>goto-mbr-expression</code> statements.</li>
  * </ul>
  * <p>
- * The user can however expect that:
+ * Appropriate entries in the {@link Program} object are created for:
  * <ul>
- *     <li>An entry for every label is in the translated program allocation table.</li>
- *     <li>An entry for every if/else target pair is in the translated if/else bidirectional map.</li>
- *     <li>A reclaim promise is made for every block allocated contiguosly.</li>
- *     <li>A block annotation is made for every block without explicit starting address.</li>
+ *     <li>Label addresses.</li>
+ *     <li>Label instruction count.</li>
+ *     <li>If/else target pair.</li>
+ *     <li>Reclaim promises inferred from the placement labels.</li>
+ *     <li>Block size annotations inferred from other labels.</li>
  * </ul>
- * The remaining allocations and next addresses are determined separately (e.g. by a {@link Allocator}).
+ * The remaining allocations and next addresses are determined separately (e.g. by an {@link Allocator}).
  */
 public class Translator extends MalBaseListener {
 
-    private TranslatedInstruction currentInstruction;
-    private TranslatedProgram translatedProgram;
+    private Instruction currentInstruction;
+    private Program program;
 
     private boolean inContiguousAllocation;
     private int reclaimedBlockStart;
@@ -61,22 +60,22 @@ public class Translator extends MalBaseListener {
     private int blockSize;
 
     /**
-     * Getter for translatedProgram.
+     * Getter for program.
      *
      * @return The translated program based on the parsed MAL source.
      */
-    public TranslatedProgram getTranslatedProgram() {
-        return translatedProgram;
+    public Program getProgram() {
+        return program;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterUProgram(MalParser.UProgramContext ctx) {
-        translatedProgram = new TranslatedProgram();
+        program = new Program();
         inContiguousAllocation = false;
-        reclaimedBlockStart = TranslatedInstruction.UNDETERMINED;
-        reclaimedBlockEnd = TranslatedInstruction.UNDETERMINED;
+        reclaimedBlockStart = Instruction.UNDETERMINED;
+        reclaimedBlockEnd = Instruction.UNDETERMINED;
         inBlockAnnotation = true; // Start in block annotation for entry point
         blockStartInstruction = 0;
         blockSize = 1;
@@ -88,10 +87,10 @@ public class Translator extends MalBaseListener {
     @Override public void exitUProgram(MalParser.UProgramContext ctx) {
         if (inContiguousAllocation) {
             inContiguousAllocation = false;
-            translatedProgram.getReclaimPromises().add(new FreeChunk(reclaimedBlockStart, reclaimedBlockEnd - 1));
+            program.getReclaimPromises().put(reclaimedBlockStart, reclaimedBlockEnd - 1);
         } else if (inBlockAnnotation) {
             inBlockAnnotation = false;
-            translatedProgram.getBlockAnnotations().put(blockStartInstruction, blockSize - 1);
+            program.getBlockAnnotations().put(blockStartInstruction, blockSize - 1);
         }
     }
 
@@ -99,7 +98,7 @@ public class Translator extends MalBaseListener {
      * {@inheritDoc}
      */
     @Override public void enterInstruction(MalParser.InstructionContext ctx) {
-        currentInstruction = new TranslatedInstruction();
+        currentInstruction = new Instruction();
 
         if (inContiguousAllocation)
             currentInstruction.setAddress(reclaimedBlockEnd);
@@ -114,7 +113,7 @@ public class Translator extends MalBaseListener {
         else if (inBlockAnnotation)
             ++blockSize;
 
-        translatedProgram.getInstructions().add(currentInstruction);
+        program.getInstructions().add(currentInstruction);
     }
 
     /**
@@ -130,65 +129,65 @@ public class Translator extends MalBaseListener {
             reclaimedBlockStart = currentInstruction.getAddress();
             reclaimedBlockEnd = reclaimedBlockStart;
 
-            // TODO Consider allowing contiguous allocation during block annotation
+            // Consider allowing contiguous allocation during block annotation.
             // This is tricky, because addresses for the annotated block became determined.
             // For now, just drop it: it's always possible to end the block with a goto the
             // next instruction instead of letting it fall through.
-            inBlockAnnotation = false;
+            inBlockAnnotation = false; // The block is not annotated and becomes unreachable
         } else {
             // Start a block annotation
             inBlockAnnotation = true;
-            blockStartInstruction = translatedProgram.getInstructions().size();
+            blockStartInstruction = program.getInstructions().size();
             blockSize = 1;
         }
 
-        if (!translatedProgram.getAddressForLabel().containsKey(currentInstruction.getLabel()))
-            translatedProgram.getAddressForLabel().put(currentInstruction.getLabel(), currentInstruction.getAddress());
+        if (!program.getAddressForLabel().containsKey(currentInstruction.getLabel()))
+            program.getAddressForLabel().put(currentInstruction.getLabel(), currentInstruction.getAddress());
 
-        if (!translatedProgram.getCountForLabel().containsKey(currentInstruction.getLabel()))
-            translatedProgram.getCountForLabel().put(currentInstruction.getLabel(), translatedProgram.getInstructions().size());
+        if (!program.getCountForLabel().containsKey(currentInstruction.getLabel()))
+            program.getCountForLabel().put(currentInstruction.getLabel(), program.getInstructions().size());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterBRegister(MalParser.BRegisterContext ctx) {
-        currentInstruction.getInstruction().clear(CBit.B_0.getBitIndex(), CBit.B_3.getBitIndex());
+        currentInstruction.getControl().clear(CBit.B_0.getBitIndex(), CBit.B_3.getBitIndex());
 
         switch (ctx.getText()) {
             case "MAR":
                 break;
             case "PC":
-                currentInstruction.getInstruction().set(CBit.B_0.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_0.getBitIndex());
                 break;
             case "MBR":
-                currentInstruction.getInstruction().set(CBit.B_1.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_1.getBitIndex());
                 break;
             case "MBRU":
-                currentInstruction.getInstruction().set(CBit.B_0.getBitIndex());
-                currentInstruction.getInstruction().set(CBit.B_1.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_0.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_1.getBitIndex());
                 break;
             case "SP":
-                currentInstruction.getInstruction().set(CBit.B_2.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_2.getBitIndex());
                 break;
             case "LV":
-                currentInstruction.getInstruction().set(CBit.B_2.getBitIndex());
-                currentInstruction.getInstruction().set(CBit.B_0.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_2.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_0.getBitIndex());
                 break;
             case "CPP":
-                currentInstruction.getInstruction().set(CBit.B_2.getBitIndex());
-                currentInstruction.getInstruction().set(CBit.B_1.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_2.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_1.getBitIndex());
                 break;
             case "TOS":
-                currentInstruction.getInstruction().set(CBit.B_2.getBitIndex());
-                currentInstruction.getInstruction().set(CBit.B_1.getBitIndex());
-                currentInstruction.getInstruction().set(CBit.B_0.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_2.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_1.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_0.getBitIndex());
                 break;
             case "OPC":
-                currentInstruction.getInstruction().set(CBit.B_3.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_3.getBitIndex());
                 break;
             default:
-                currentInstruction.getInstruction().set(CBit.B_0.getBitIndex(), CBit.B_3.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_0.getBitIndex(), CBit.B_3.getBitIndex());
                 break;
         }
     }
@@ -199,31 +198,31 @@ public class Translator extends MalBaseListener {
     @Override public void enterCRegister(MalParser.CRegisterContext ctx) {
         switch (ctx.getText()) {
             case "MAR":
-                currentInstruction.getInstruction().set(CBit.C_MAR.getBitIndex());
+                currentInstruction.getControl().set(CBit.C_MAR.getBitIndex());
                 break;
             case "MDR":
-                currentInstruction.getInstruction().set(CBit.C_MDR.getBitIndex());
+                currentInstruction.getControl().set(CBit.C_MDR.getBitIndex());
                 break;
             case "PC":
-                currentInstruction.getInstruction().set(CBit.C_PC.getBitIndex());
+                currentInstruction.getControl().set(CBit.C_PC.getBitIndex());
                 break;
             case "SP":
-                currentInstruction.getInstruction().set(CBit.C_SP.getBitIndex());
+                currentInstruction.getControl().set(CBit.C_SP.getBitIndex());
                 break;
             case "LV":
-                currentInstruction.getInstruction().set(CBit.C_LV.getBitIndex());
+                currentInstruction.getControl().set(CBit.C_LV.getBitIndex());
                 break;
             case "CPP":
-                currentInstruction.getInstruction().set(CBit.C_CPP.getBitIndex());
+                currentInstruction.getControl().set(CBit.C_CPP.getBitIndex());
                 break;
             case "TOS":
-                currentInstruction.getInstruction().set(CBit.C_TOS.getBitIndex());
+                currentInstruction.getControl().set(CBit.C_TOS.getBitIndex());
                 break;
             case "OPC":
-                currentInstruction.getInstruction().set(CBit.C_OPC.getBitIndex());
+                currentInstruction.getControl().set(CBit.C_OPC.getBitIndex());
                 break;
             case "H":
-                currentInstruction.getInstruction().set(CBit.C_H.getBitIndex());
+                currentInstruction.getControl().set(CBit.C_H.getBitIndex());
                 break;
             default:
                 break;
@@ -234,164 +233,164 @@ public class Translator extends MalBaseListener {
      * {@inheritDoc}
      */
     @Override public void enterSll8Expression(MalParser.Sll8ExpressionContext ctx) {
-        currentInstruction.getInstruction().set((CBit.SLL_8.getBitIndex()));
+        currentInstruction.getControl().set((CBit.SLL_8.getBitIndex()));
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterSra1Expression(MalParser.Sra1ExpressionContext ctx) {
-        currentInstruction.getInstruction().set((CBit.SRA_1.getBitIndex()));
+        currentInstruction.getControl().set((CBit.SRA_1.getBitIndex()));
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterAndOperation(MalParser.AndOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.EN_A.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_B.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_B.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterOrOperation(MalParser.OrOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_A.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_B.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_B.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterANotOperation(MalParser.ANotOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_A.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.INV_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.INV_A.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterBNotOperation(MalParser.BNotOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_0.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_A.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_B.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_0.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_B.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterSumOperation(MalParser.SumOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_0.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_A.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_B.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_0.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_B.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterAIncOperation(MalParser.AIncOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_0.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_A.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.INC.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_0.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.INC.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterBIncOperation(MalParser.BIncOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_0.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_B.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.INC.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_0.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_B.getBitIndex());
+        currentInstruction.getControl().set(CBit.INC.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterSubOperation(MalParser.SubOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_0.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_A.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_B.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.INV_A.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.INC.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_0.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_B.getBitIndex());
+        currentInstruction.getControl().set(CBit.INV_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.INC.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterANegOperation(MalParser.ANegOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_0.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_A.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.INV_A.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.INC.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_0.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.INV_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.INC.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterBDecOperation(MalParser.BDecOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_0.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_B.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.INV_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_0.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_B.getBitIndex());
+        currentInstruction.getControl().set(CBit.INV_A.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterSumIncOperation(MalParser.SumIncOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_0.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_A.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_B.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.INC.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_0.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_B.getBitIndex());
+        currentInstruction.getControl().set(CBit.INC.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterAPassOperation(MalParser.APassOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_A.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterBPassOperation(MalParser.BPassOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.EN_B.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.EN_B.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterNegOneOperation(MalParser.NegOneOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_0.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.INV_A.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_0.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.INV_A.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterZeroOperation(MalParser.ZeroOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override public void enterOneOperation(MalParser.OneOperationContext ctx) {
-        currentInstruction.getInstruction().set(CBit.F_0.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.F_1.getBitIndex());
-        currentInstruction.getInstruction().set(CBit.INC.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_0.getBitIndex());
+        currentInstruction.getControl().set(CBit.F_1.getBitIndex());
+        currentInstruction.getControl().set(CBit.INC.getBitIndex());
     }
 
     /**
@@ -399,9 +398,9 @@ public class Translator extends MalBaseListener {
      */
     @Override public void enterWordMemoryStatement(MalParser.WordMemoryStatementContext ctx) {
         if (ctx.getText().equals("rd"))
-            currentInstruction.getInstruction().set(CBit.READ.getBitIndex());
+            currentInstruction.getControl().set(CBit.READ.getBitIndex());
         else if (ctx.getText().equals("wr"))
-            currentInstruction.getInstruction().set(CBit.WRITE.getBitIndex());
+            currentInstruction.getControl().set(CBit.WRITE.getBitIndex());
     }
 
     /**
@@ -409,7 +408,7 @@ public class Translator extends MalBaseListener {
      */
     @Override public void enterByteMemoryStatement(MalParser.ByteMemoryStatementContext ctx) {
         if (ctx.getText().equals("fetch"))
-            currentInstruction.getInstruction().set(CBit.FETCH.getBitIndex());
+            currentInstruction.getControl().set(CBit.FETCH.getBitIndex());
     }
 
     /**
@@ -418,10 +417,10 @@ public class Translator extends MalBaseListener {
     @Override public void enterControlStatement(MalParser.ControlStatementContext ctx) {
         if (inContiguousAllocation) {
             inContiguousAllocation = false;
-            translatedProgram.getReclaimPromises().add(new FreeChunk(reclaimedBlockStart, reclaimedBlockEnd));
+            program.getReclaimPromises().put(reclaimedBlockStart, reclaimedBlockEnd);
         } else if (inBlockAnnotation) {
             inBlockAnnotation = false;
-            translatedProgram.getBlockAnnotations().put(blockStartInstruction, blockSize);
+            program.getBlockAnnotations().put(blockStartInstruction, blockSize);
         }
     }
 
@@ -436,7 +435,7 @@ public class Translator extends MalBaseListener {
      * {@inheritDoc}
      */
     @Override public void enterGotoMbrExprStatement(MalParser.GotoMbrExprStatementContext ctx) {
-        currentInstruction.getInstruction().set(CBit.JMPC.getBitIndex());
+        currentInstruction.getControl().set(CBit.JMPC.getBitIndex());
     }
 
     /**
@@ -454,7 +453,7 @@ public class Translator extends MalBaseListener {
      */
     @Override public void enterIfStatement(MalParser.IfStatementContext ctx) {
         currentInstruction.setTargetLabel(ctx.NAME().get(1).getText());
-        translatedProgram.addIfElseTarget(ctx.NAME().get(0).getText(), ctx.NAME().get(1).getText());
+        program.addIfElseTarget(ctx.NAME().get(0).getText(), ctx.NAME().get(1).getText());
     }
 
     /**
@@ -462,9 +461,9 @@ public class Translator extends MalBaseListener {
      */
     @Override public void enterCondition(MalParser.ConditionContext ctx) {
         if (ctx.getText().equals("N"))
-            currentInstruction.getInstruction().set(CBit.JAMN.getBitIndex());
+            currentInstruction.getControl().set(CBit.JAMN.getBitIndex());
         else if (ctx.getText().equals("Z"))
-            currentInstruction.getInstruction().set(CBit.JAMZ.getBitIndex());
+            currentInstruction.getControl().set(CBit.JAMZ.getBitIndex());
     }
 
     /**

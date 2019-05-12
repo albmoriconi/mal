@@ -17,122 +17,97 @@
 
 package it.albmoriconi.mal;
 
-import it.albmoriconi.mal.memory.FreeChunk;
-import it.albmoriconi.mal.memory.FreeChunkChain;
-import it.albmoriconi.mal.program.TranslatedInstruction;
-import it.albmoriconi.mal.program.TranslatedProgram;
+import it.albmoriconi.mal.controlstore.FreeChunkChain;
+import it.albmoriconi.mal.program.Instruction;
+import it.albmoriconi.mal.program.Program;
 
 import java.util.List;
 
 /**
- * Offers functionality to determine the address and next address fields for a translated microprogram.
+ * Determines the address and next address fields for instructions in a program.
  * <p>
- * The translation of a microprogram source code does not contain all information on instruction
- * address and next instruction address. They have to be determined based on a series of constraints
- * (e.g. distance between if/else branches).
+ * The translation of a MAL source code does not contain all information on instruction addresses
+ * and next instruction addresses. Some of them have to be determined based on a series of constraints.
  */
-public class Allocator {
+class Allocator {
 
+    private static final int PROGRAM_WORDS = 512;
     private static final int IF_ELSE_DISPLACEMENT = 256;
 
     private Allocator() { }
 
     /**
-     * Processes the microprogram, filling the missing address fields.
+     * Processes the program, filling the missing address and next address fields.
      *
-     * @param uProgram The translated microprogram.
+     * @param program The translated program.
      */
-    public static void process(TranslatedProgram uProgram, int programWords) {
+    static void process(Program program) {
         // Allocations during the processing have to update a free chunk map.
-        FreeChunkChain freeChunks = new FreeChunkChain(programWords);
+        FreeChunkChain freeChunks = new FreeChunkChain(PROGRAM_WORDS);
 
         // First step: honour reclaim promises made by the translator.
         // We do this in the allocator because the translator does not know the number of words and
-        // can't mantain a free chunk chain.
-        for (FreeChunk fc : uProgram.getReclaimPromises())
-            freeChunks.reclaim(fc.getStartAddress(), fc.getEndAddress());
-
-        // Second step: allocate annotated blocks (i.e. blocks without explicit address in the source)
-        allocateBlocks(uProgram, freeChunks);
-
-        // Third step: now we know all the targets, set next address for remaining instructions with goto
-        // TODO Should we handle halt at this step?
-        nextAddressForGotos(uProgram);
-    }
-
-    // TODO Refactor
-    // TODO Add special case for if / else where one is allocated, the other is not
-    private static void allocateBlocks(TranslatedProgram uProgram, FreeChunkChain freeChunks) {
-        // TODO Add exception handling
-        if (uProgram.hasInvalidIfStatements())
-            return;
-
-        // Iterate over instruction counts where blocks starts
-        for (int ic : uProgram.getBlockAnnotations().keySet()) {
-            String blockLabel = uProgram.getInstructions().get(ic).getLabel();
-            int blockSize = uProgram.getBlockAnnotations().get(ic);
-
-            if (uProgram.hasIfElseTarget(blockLabel)) { // If it's an if/else target block allocate them together
-                String pairBlockLabel = uProgram.getOtherTargetInPair(blockLabel);
-                String ifLabel = "";
-                String elseLabel = "";
-                int pairBlockCount = uProgram.getCountForLabel().get(pairBlockLabel);
-                int pairBlockSize = uProgram.getBlockAnnotations().get(pairBlockCount);
-                int ifCount = TranslatedInstruction.UNDETERMINED;
-                int elseCount = TranslatedInstruction.UNDETERMINED;
-                int ifBlockSize = TranslatedInstruction.UNDETERMINED;
-                int elseBlockSize = TranslatedInstruction.UNDETERMINED;
-
-                if (uProgram.isIfTarget(blockLabel)) {
-                    ifLabel = blockLabel;
-                    elseLabel = pairBlockLabel;
-                    ifCount = ic;
-                    ifBlockSize = blockSize;
-                    elseCount = pairBlockCount;
-                    elseBlockSize = pairBlockSize;
-                } else {
-                    ifLabel = pairBlockLabel;
-                    elseLabel = blockLabel;
-                    ifCount = pairBlockCount;
-                    ifBlockSize = pairBlockSize;
-                    elseCount = ic;
-                    elseBlockSize = blockSize;
-                }
-
-                List<Integer> chunkPair = freeChunks.getChunkPairGt(elseBlockSize, ifBlockSize, IF_ELSE_DISPLACEMENT);
-                int elseChunkStart = chunkPair.get(0);
-                int ifChunkStart = chunkPair.get(1);
-                freeChunks.reclaim(ifChunkStart, ifChunkStart + ifBlockSize - 1);
-                freeChunks.reclaim(elseChunkStart, elseChunkStart + elseBlockSize - 1);
-                allocateBlock(uProgram, ifCount, ifChunkStart, ifBlockSize);
-                allocateBlock(uProgram, elseCount, elseChunkStart, elseBlockSize);
-                uProgram.getAddressForLabel().put(ifLabel, ifChunkStart);
-                uProgram.getAddressForLabel().put(elseLabel, elseChunkStart);
-            } else { // Otherwise it's a simple block, allocate wherever
-                int fcStart = freeChunks.getChunkGt(blockSize);
-                freeChunks.reclaim(fcStart, fcStart + blockSize - 1);
-                allocateBlock(uProgram, ic, fcStart, blockSize);
-                if (!blockLabel.isEmpty()) // Consider exception for entry point
-                    uProgram.getAddressForLabel().put(blockLabel, fcStart);
-            }
-
+        // can't keep a free chunk chain.
+        for (int startAddress : program.getReclaimPromises().keySet()) {
+            int endAddress = program.getReclaimPromises().get(startAddress);
+            freeChunks.reclaim(startAddress, endAddress);
         }
-    }
 
-    private static void allocateBlock(TranslatedProgram uProgram, int instructionCount, int firstAddress, int blockSize) {
-        for (int ic = instructionCount; ic < instructionCount + blockSize - 1; ic++) {
-            uProgram.getInstructions().get(ic).setAddress(firstAddress++);
-            uProgram.getInstructions().get(ic).setNextAddress(firstAddress);
-        }
-        uProgram.getInstructions().get(instructionCount + blockSize - 1).setAddress(firstAddress);
-    }
+        // Second step: allocate annotated blocks (i.e. entry point and blocks without placement label)
+        allocateBlocks(program, freeChunks);
 
-    private static void nextAddressForGotos(TranslatedProgram uProgram) {
-        for (TranslatedInstruction ti : uProgram.getInstructions()) {
-            if (!ti.hasNextAddress() && uProgram.getAddressForLabel().containsKey(ti.getTargetLabel()))
-                ti.setNextAddress(uProgram.getAddressForLabel().get(ti.getTargetLabel()));
+        // Third step: now we know all the targets, set next address for remaining instructions with goto (or halt)
+        for (Instruction ti : program.getInstructions()) {
+            if (!ti.hasNextAddress() && program.getAddressForLabel().containsKey(ti.getTargetLabel()))
+                ti.setNextAddress(program.getAddressForLabel().get(ti.getTargetLabel()));
             else if (ti.isHalt())
                 ti.setNextAddress(ti.getAddress());
         }
+    }
+
+    private static void allocateBlocks(Program program, FreeChunkChain freeChunks) {
+        // Iterate over instruction counts where blocks starts
+        for (int ic : program.getBlockAnnotations().keySet()) {
+            String blockLabel = program.getInstructions().get(ic).getLabel();
+            int blockSize = program.getBlockAnnotations().get(ic);
+
+            if (program.hasIfElseTarget(blockLabel)) { // If it's an if/else target block allocate them together
+                String pairBlockLabel = program.getOtherTargetInPair(blockLabel);
+                int pairBlockCount = program.getCountForLabel().get(pairBlockLabel);
+                int pairBlockSize = program.getBlockAnnotations().get(pairBlockCount);
+
+                boolean blockIsIf = program.isIfTarget(blockLabel);
+
+                String ifLabel = blockIsIf ? blockLabel : pairBlockLabel;
+                int ifBlockSize = blockIsIf ? blockSize : pairBlockSize;
+                String elseLabel = blockIsIf ? pairBlockLabel : blockLabel;
+                int elseBlockSize = blockIsIf ? pairBlockSize : blockSize;
+
+                List<Integer> regionPair = freeChunks.getDisplacedRegions(elseBlockSize, ifBlockSize, IF_ELSE_DISPLACEMENT);
+                allocateBlock(program, freeChunks, elseLabel, regionPair.get(0));
+                allocateBlock(program, freeChunks, ifLabel, regionPair.get(1));
+            } else { // Otherwise it's a simple block, allocate at start of first useful chunk
+                allocateBlock(program, freeChunks, blockLabel, freeChunks.getChunkGt(blockSize));
+            }
+        }
+    }
+
+    private static void allocateBlock(Program program, FreeChunkChain freeChunks, String label, int firstAddress) {
+        int labelCount = label.isEmpty() ? 0 : program.getCountForLabel().get(label);
+        int blockSize = program.getBlockAnnotations().get(labelCount);
+
+        // Reclaim chunk
+        freeChunks.reclaim(firstAddress, firstAddress + blockSize - 1);
+
+        // Add entry for label
+        if (!label.isEmpty())
+            program.getAddressForLabel().put(label, firstAddress);
+
+        // Fill address and next address
+        for (int ic = labelCount; ic < labelCount + blockSize - 1; ic++) {
+            program.getInstructions().get(ic).setAddress(firstAddress++);
+            program.getInstructions().get(ic).setNextAddress(firstAddress);
+        }
+        program.getInstructions().get(labelCount + blockSize - 1).setAddress(firstAddress);
     }
 }

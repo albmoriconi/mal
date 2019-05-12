@@ -17,8 +17,8 @@
 
 package it.albmoriconi.mal;
 
-import it.albmoriconi.mal.program.TranslatedInstruction;
-import it.albmoriconi.mal.program.TranslatedProgram;
+import it.albmoriconi.mal.program.Instruction;
+import it.albmoriconi.mal.program.Program;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -46,33 +46,33 @@ public class TextPrinter {
      * @param programWords The number of words in the control store.
      * @param filename The path of the output file.
      */
-    public static void printProgram(TranslatedProgram program, int programWords, String filename) throws IOException {
-        Map<Integer, TranslatedInstruction> controlStoreMapping = new HashMap<>();
+    public static void printProgram(Program program, int programWords, String filename) throws IOException {
+        Map<Integer, Instruction> controlStoreMapping = new HashMap<>();
 
-        for (TranslatedInstruction ti : program.getInstructions())
+        for (Instruction ti : program.getInstructions())
             controlStoreMapping.put(ti.getAddress(), ti);
 
         BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
 
         for (int i = 0; i < programWords; i++) {
-            TranslatedInstruction ci = controlStoreMapping.get(i);
+            Instruction ci = controlStoreMapping.get(i);
             String instructionText = "";
 
             if (ci != null) {
-                String nextAddressFormat = "%" + TranslatedInstruction.NEXT_ADDRESS_FIELD_LENGTH + "s";
+                String nextAddressFormat = "%" + Instruction.NEXT_ADDRESS_FIELD_LENGTH + "s";
                 String nextAddress = Integer.toBinaryString(controlStoreMapping.get(i).getNextAddress());
 
-                if (nextAddress.length() > TranslatedInstruction.NEXT_ADDRESS_FIELD_LENGTH)
-                    nextAddress = nextAddress.substring(nextAddress.length() - TranslatedInstruction.NEXT_ADDRESS_FIELD_LENGTH);
+                if (nextAddress.length() > Instruction.NEXT_ADDRESS_FIELD_LENGTH)
+                    nextAddress = nextAddress.substring(nextAddress.length() - Instruction.NEXT_ADDRESS_FIELD_LENGTH);
 
                 instructionText = String.format(nextAddressFormat, nextAddress).replace(" ", "0");
 
-                for (int j = 0; j < TranslatedInstruction.CONTROL_FIELD_LENGTH; j++)
-                    instructionText += (ci.getInstruction().get(j)) ? "1" : "0";
+                for (int j = 0; j < Instruction.CONTROL_FIELD_LENGTH; j++)
+                    instructionText += (ci.getControl().get(j)) ? "1" : "0";
 
                 writer.write(instructionText + "\n");
             } else {
-                for (int j = 0; j < TranslatedInstruction.INSTRUCTION_LENGTH; j++)
+                for (int j = 0; j < Instruction.INSTRUCTION_LENGTH; j++)
                     instructionText += "0";
                     writer.write(instructionText + "\n");
             }

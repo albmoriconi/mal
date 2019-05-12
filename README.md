@@ -1,5 +1,8 @@
 # MAL
 
+> French for "sick," something you become if you have to write too much code in it.
+> - Andrew S. Tanenbaum
+
 MAL is an assembler for the [MIC-1](https://en.wikipedia.org/wiki/MIC-1)
 Micro-Assembly Language.
 

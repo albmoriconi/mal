@@ -17,59 +17,56 @@
 
 package it.albmoriconi.mal.program;
 
-import it.albmoriconi.mal.memory.FreeChunk;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Contains the translated microprogram.
+ * A MAL program.
  * <p>
- * The information on a microprogram that can be determined upon reading a source file, without any
+ * The information on a program that can be determined upon reading a source file, without any
  * additional processing, are:
  * <ul>
  *     <li>The translation of the instructions</li>
- *     <li>The allocation of instructions with addressForLabel and specified addresses</li>
- *     <li>The pairs of if/else target addressForLabel</li>
+ *     <li>The address for placement labels</li>
+ *     <li>The instruction count for all labels</li>
+ *     <li>The pairs of if/else target labels</li>
+ *     <li>The reclaim promises inferred from the placement labels</li>
+ *     <li>The block size annotations inferred from other labels</li>
  * </ul>
  */
-public class TranslatedProgram {
+public class Program {
 
-    // TODO Add methods for puts/gets/etc. instead of field accessors?
-    private List<TranslatedInstruction> instructions;
+    private List<Instruction> instructions;
     private Map<String, Integer> addressForLabel;
     private Map<String, Integer> countForLabel;
     private Map<String, String> ifElseTargets;
     private Set<String> elseTargets;
-    private boolean invalidIfStatements;
-    private List<FreeChunk> reclaimPromises;
+    private Map<Integer, Integer> reclaimPromises;
     private Map<Integer, Integer> blockAnnotations;
 
     /**
      * Constructor.
      */
-    public TranslatedProgram() {
+    public Program() {
         instructions = new ArrayList<>();
         addressForLabel = new HashMap<>();
         countForLabel = new HashMap<>();
         ifElseTargets = new HashMap<>();
         elseTargets = new HashSet<>();
-        invalidIfStatements = false;
-        reclaimPromises = new LinkedList<>();
+        reclaimPromises = new HashMap<>();
         blockAnnotations = new HashMap<>();
     }
 
     /**
      * Getter for instructions.
      *
-     * @return The translation of the instructions in the microprogram.
+     * @return The instructions in the program.
      */
-    public List<TranslatedInstruction> getInstructions() {
+    public List<Instruction> getInstructions() {
         return instructions;
     }
 
@@ -85,25 +82,25 @@ public class TranslatedProgram {
     /**
      * Getter for countForLabel.
      *
-     * @return A map where the key is the label, the value is the count in the source.
+     * @return A map where the key is the label, the value is the instruction count in the source.
      */
     public Map<String, Integer> getCountForLabel() {
         return countForLabel;
     }
 
     /**
-     * Getter for reclaimPromises
+     * Getter for reclaimPromises.
      *
-     * @return A list of chunks that have to be reclaimed by the allocator. Is valid if source is valid.
+     * @return A map where the key is the starting address of the region to be reclaimed, the value its ending address.
      */
-    public List<FreeChunk> getReclaimPromises() {
+    public Map<Integer, Integer> getReclaimPromises() {
         return reclaimPromises;
     }
 
     /**
-     * Getter for blockAnnotations
+     * Getter for blockAnnotations.
      *
-     * @return A map where the key is the instruction count (relative to source) and the value the size of block.
+     * @return A map where the key is the instruction count of the label, the value the size of its block.
      */
     public Map<Integer, Integer> getBlockAnnotations() {
         return blockAnnotations;
@@ -116,6 +113,9 @@ public class TranslatedProgram {
      * This means that statement <code>if (cond) goto l1; else goto l2;</code> in the source enforces
      * that <code>l1</code> is never used as an else target, <code>l2</code> is never used as an if
      * target, and every time they're used as if/else targets they're paired together.
+     *
+     * @param ifLabel The <code>if</code> clause label.
+     * @param elseLabel The <code>else</code> clause label.
      */
     public void addIfElseTarget(String ifLabel, String elseLabel) {
         // Preserve bidirectionality of mapping
@@ -126,17 +126,17 @@ public class TranslatedProgram {
             elseTargets.add(elseLabel);
         } else if (!labelsArePairedTogether(ifLabel, elseLabel)) {
             // If one (or both) are already in the map, but they're not paired together, source is invalid
-            invalidIfStatements = true;
+            throw new IllegalArgumentException("Invalid if statement");
         }
+    }
+
+    private boolean labelsAreNewTargets(String ifLabel, String elseLabel) {
+        return !ifElseTargets.containsKey(ifLabel) && !ifElseTargets.containsKey(elseLabel);
     }
 
     private boolean labelsArePairedTogether(String ifLabel, String elseLabel) {
         // Note that this method returns false if both labels are not if/else targets
         return ifElseTargets.containsKey(ifLabel) && ifElseTargets.get(ifLabel).equals(elseLabel);
-    }
-
-    private boolean labelsAreNewTargets(String ifLabel, String elseLabel) {
-        return !ifElseTargets.containsKey(ifLabel) && !ifElseTargets.containsKey(elseLabel);
     }
 
     /**
@@ -156,7 +156,12 @@ public class TranslatedProgram {
      * @return The other element of the pair, or <code>null</code> if <code>label</code> is not in the map.
      */
     public String getOtherTargetInPair(String label) {
-        return ifElseTargets.get(label);
+        String otherLabel = ifElseTargets.get(label);
+
+        if (otherLabel == null)
+            throw new IllegalArgumentException("Invalid target label");
+
+        return otherLabel;
     }
 
     /**
@@ -177,14 +182,5 @@ public class TranslatedProgram {
      */
     public boolean isIfTarget(String label) {
         return hasIfElseTarget(label) && !elseTargets.contains(label);
-    }
-
-    /**
-     * A program has invalid if statements if target labels are not in a bidirectional mapping.
-     *
-     * @return <code>true</code> if, and only if, the program has invalid if statements.
-     */
-    public boolean hasInvalidIfStatements() {
-        return invalidIfStatements;
     }
 }

@@ -20,26 +20,27 @@ package it.albmoriconi.mal.program;
 import java.util.BitSet;
 
 /**
- * Represents a MAL microinstruction.
+ * A MAL instruction.
  * <p>
  * It keeps track of:
  * <ul>
- *     <li>The address it's allocated at</li>
- *     <li>The next instruction address</li>
- *     <li>The control fields</li>
+ *     <li>The address it's allocated at (possibly undetermined)</li>
+ *     <li>The next address field (possibly undetermined)</li>
+ *     <li>The control field</li>
+ *     <li>If the instruction is <code>halt</code></li>
  * </ul>
  * If applicable, it also contains:
  * <ul>
  *     <li>The instruction label</li>
- *     <li>The next instruction label</li>
+ *     <li>The target label</li>
  * </ul>
  */
-public class TranslatedInstruction {
+public class Instruction {
 
     private int address;
     private int nextAddress;
+    private BitSet control;
     private boolean isHalt;
-    private BitSet instruction;
     private String label;
     private String targetLabel;
 
@@ -49,33 +50,33 @@ public class TranslatedInstruction {
     public static int UNDETERMINED = -1;
 
     /**
-     * Address fields length
+     * Address fields length in bits
      */
     public static int NEXT_ADDRESS_FIELD_LENGTH = 9;
 
     /**
-     * Number of bits in a microinstruction (excluding next address field).
+     * Control field length in bits.
      */
     public static final int CONTROL_FIELD_LENGTH = 27;
 
     /**
-     * Number of bits in a microinstruction.
+     * Number of bits in a instruction.
      */
     public static final int INSTRUCTION_LENGTH = NEXT_ADDRESS_FIELD_LENGTH + CONTROL_FIELD_LENGTH;
 
     /**
      * Constructor.
      */
-    public TranslatedInstruction() {
+    public Instruction() {
         this.address = UNDETERMINED;
         this.nextAddress = UNDETERMINED;
+        this.control = new BitSet(CONTROL_FIELD_LENGTH);
         this.isHalt = false;
         this.label = "";
         this.targetLabel = "";
-        this.instruction = new BitSet(CONTROL_FIELD_LENGTH);
 
         // By default, an instruction doesn't read any register on the B bus
-        this.instruction.set(CBit.B_0.getBitIndex(), CBit.B_3.getBitIndex());
+        this.control.set(CBit.B_0.getBitIndex(), CBit.B_3.getBitIndex());
     }
 
     /**
@@ -114,25 +115,6 @@ public class TranslatedInstruction {
         this.nextAddress = nextAddress;
     }
 
-
-    /**
-     * Getter for instruction.
-     *
-     * @return The instruction control fields.
-     */
-    public BitSet getInstruction() {
-        return instruction;
-    }
-
-    /**
-     * Setter for instruction.
-     *
-     * @param instruction The instruction control fields.
-     */
-    public void setInstruction(BitSet instruction) {
-        this.instruction = instruction;
-    }
-
     /**
      * Getter for the isHalt property.
      *
@@ -149,6 +131,15 @@ public class TranslatedInstruction {
      */
     public void setIsHalt(boolean isHalt) {
         this.isHalt = isHalt;
+    }
+
+    /**
+     * Getter for control.
+     *
+     * @return The instruction control field.
+     */
+    public BitSet getControl() {
+        return control;
     }
 
     /**
@@ -190,7 +181,7 @@ public class TranslatedInstruction {
     /**
      * Checks if the instruction is allocated.
      *
-     * @return <code>true</code> if the address is determined, <code>false</code> otherwise.
+     * @return <code>true</code> if, and only if, the address is determined.
      */
     public boolean hasAddress() {
         return address != UNDETERMINED;
@@ -199,7 +190,7 @@ public class TranslatedInstruction {
     /**
      * Checks if next address field is determined.
      *
-     * @return <code>true</code> if next address is determined, <code>false</code> otherwise.
+     * @return <code>true</code> if, and only if, the next address is determined.
      */
     public boolean hasNextAddress() {
         return nextAddress != UNDETERMINED;
@@ -208,27 +199,18 @@ public class TranslatedInstruction {
     /**
      * Checks if the instruction has a label.
      *
-     * @return <code>true</code> if instruction has label, <code>false</code> otherwise.
+     * @return <code>true</code> if, and only if, the instruction has label.
      */
     public boolean hasLabel() {
         return !label.isEmpty();
     }
 
     /**
-     * Checks if the instruction specifies a label for the next instruction.
+     * Checks if the instruction specifies a target label.
      *
-     * @return <code>true</code> if instruction has label for target, <code>false</code> otherwise.
+     * @return <code>true</code> if, and only if, the instruction has a target label.
      */
     public boolean hasTargetLabel() {
         return !targetLabel.isEmpty();
-    }
-
-    /**
-     * Checks if the instruction successor is already specified, in the form of an address or a label.
-     *
-     * @return <code>true</code> if instruction has determined address or label for target.
-     */
-    public boolean hasSuccessor() {
-        return hasNextAddress() || hasTargetLabel();
     }
 }

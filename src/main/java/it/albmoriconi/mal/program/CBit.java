@@ -18,7 +18,7 @@
 package it.albmoriconi.mal.program;
 
 /**
- * Enumerates the control bits in a microinstruction.
+ * Control field bits in an instruction.
  */
 public enum CBit {
     B_0(0),
@@ -54,7 +54,7 @@ public enum CBit {
     /**
      * Constructor.
      *
-     * @param bitIndex The index of the bit in the instruction.
+     * @param bitIndex The index of the bit in the control field.
      */
     CBit(int bitIndex) {
         this.bitIndex = bitIndex;
@@ -63,7 +63,7 @@ public enum CBit {
     /**
      * Getter for bitIndex.
      *
-     * @return The index of the bit in the instruction.
+     * @return The index of the bit in the control field.
      */
     public int getBitIndex() {
         return bitIndex;

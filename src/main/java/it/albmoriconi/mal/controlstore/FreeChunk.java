@@ -18,7 +18,7 @@
 package it.albmoriconi.mal.controlstore;
 
 /**
- * Represents a contiguous chunk of memory words in the program control store.
+ * A contiguous chunk of memory words in the program control store.
  */
 class FreeChunk {
 

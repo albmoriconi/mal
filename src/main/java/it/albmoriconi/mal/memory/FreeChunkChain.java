@@ -26,7 +26,7 @@ import java.util.ListIterator;
  * Represents a chain of free memory chunks in the control store.
  * <p>
  * The chain is ordered, i.e. for any element <code>c1</code>, if c1 has a follower, be it
- * <code>c2</code>, it holds that <code>c1.endAddress < c2.startAddress</code>.
+ * <code>c2</code>, it holds that <code>c1.endAddress &lt; c2.startAddress</code>.
  */
 public class FreeChunkChain {
 

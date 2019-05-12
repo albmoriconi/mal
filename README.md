@@ -5,10 +5,10 @@ Micro-Assembly Language.
 
 ## Table of contents
 
-* [Build][#build]
-* [Usage][#usage]
-* [Syntax][#syntax]
-* [References][#references]
+* [Build](#build)
+* [Usage](#usage)
+* [Syntax](#syntax)
+* [References](#references)
 
 ## Build
 

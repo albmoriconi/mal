@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package it.albmoriconi.mal;
+package it.albmoriconi.mal.writer;
 
 import it.albmoriconi.mal.program.Instruction;
 import it.albmoriconi.mal.program.Program;
@@ -25,57 +25,39 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
- * A naive text file printer for the translated program.
+ * Text file writer for for MAL assembled program.
  * <p>
- * See {@link #printProgram} for detailed description.
+ * See {@link #write} for detailed description.
  */
-public class TextPrinter {
+public class TextWriter {
 
-    private TextPrinter() { }
+    private TextWriter() { }
 
     /**
-     * Text file printer for MAL assembled program.
+     * Text file writer for MAL assembled program.
      * <p>
      * Every row in the output is the word of the same index in the control store.
      * If more than one instruction in the translated program have the same address, which one is
      * preserved is undefined.
      *
-     * @param program A translated program.
+     * @param program A MAL program.
      * @param programWords The number of words in the control store.
-     * @param filename The path of the output file.
+     * @param fileName The path of the output file.
      */
-    public static void printProgram(Program program, int programWords, String filename) throws IOException {
+    public static void write(Program program, int programWords, String fileName) throws IOException {
         Map<Integer, Instruction> controlStoreMapping = new HashMap<>();
 
         for (Instruction ti : program.getInstructions())
             controlStoreMapping.put(ti.getAddress(), ti);
 
-        BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
+        BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
 
         for (int i = 0; i < programWords; i++) {
             Instruction ci = controlStoreMapping.get(i);
-            String instructionText = "";
-
-            if (ci != null) {
-                String nextAddressFormat = "%" + Instruction.NEXT_ADDRESS_FIELD_LENGTH + "s";
-                String nextAddress = Integer.toBinaryString(controlStoreMapping.get(i).getNextAddress());
-
-                if (nextAddress.length() > Instruction.NEXT_ADDRESS_FIELD_LENGTH)
-                    nextAddress = nextAddress.substring(nextAddress.length() - Instruction.NEXT_ADDRESS_FIELD_LENGTH);
-
-                instructionText = String.format(nextAddressFormat, nextAddress).replace(" ", "0");
-
-                for (int j = 0; j < Instruction.CONTROL_FIELD_LENGTH; j++)
-                    instructionText += (ci.getControl().get(j)) ? "1" : "0";
-
-                writer.write(instructionText + "\n");
-            } else {
-                for (int j = 0; j < Instruction.INSTRUCTION_LENGTH; j++)
-                    instructionText += "0";
-                    writer.write(instructionText + "\n");
-            }
+            writer.write(Objects.requireNonNullElseGet(ci, () -> "0".repeat(Instruction.INSTRUCTION_LENGTH)) + "\n");
         }
 
         writer.flush();

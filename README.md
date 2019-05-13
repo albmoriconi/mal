@@ -26,24 +26,26 @@ $ git clone https://github.com/albmoriconi/mal.git
 $ ./gradlew build
 ```
 
-The built program archives with executables and library dependencies are found
-in the `build/distributions` directory.
+The built program archives with executables and library dependencies can be
+found in the `build/distributions` directory.
 
 ### Source code documentation
 
-To build the Javadoc for the project, run the `javadoc` Gradle task. It can be
-found in the `build/docs/javadoc` directory.
+To build the Javadoc for the project, run the `javadoc` Gradle task. The
+produced documentation can be found in the `build/docs/javadoc` directory.
 
 ## Usage
 
-Assuming the `mal` executable is in your PATH, running:
-
-```sh
-$ mal source.mal
 ```
+usage: mal [options] <input>
+Assembler for MIC-1 Micro-Assembly language
 
-generates output text file `a.out` with a control store word on each line.
-
+options:
+ -f <format>   output format: binary (default) | text
+ -h,--help     display this help and exit
+ -o <file>     write output to <file>
+ ```
+ 
 ## Syntax
 
 Work in progress.

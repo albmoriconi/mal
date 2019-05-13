@@ -19,13 +19,25 @@ package it.albmoriconi.mal;
 
 import it.albmoriconi.mal.antlr.MalLexer;
 import it.albmoriconi.mal.antlr.MalParser;
+import it.albmoriconi.mal.writer.BinaryWriter;
+import it.albmoriconi.mal.writer.TextWriter;
+
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 
 /**
@@ -36,36 +48,120 @@ import java.io.InputStream;
 public class Assembler {
 
     private static final int DEFAULT_PROGRAM_WORDS = 512;
+    private static final String DEFAULT_OUT_TEXT = "a.txt";
+    private static final String DEFAULT_OUT_BINARY = "a.out";
+
+    private static String inFile;
+    private static String outFile;
+    private static boolean textFormat;
 
     /**
      * Application entry point
      *
-     * @param args Command line arguments.
-     * @throws Exception Generic processing exception.
+     * @param args Command line arguments. See usage for details.
      */
-    public static void main(String[] args) throws Exception {
-        // TODO Add exception handling
-        InputStream inputStream = System.in;
+    public static void main(String[] args) {
+        parseOptions(args);
 
-        String inputFile = null;
-        if (args.length > 0)
-            inputFile = args[0];
-        if (inputFile != null)
-            inputStream = new FileInputStream(inputFile);
-
-        CharStream charStream = CharStreams.fromStream(inputStream);
+        CharStream charStream = null;
+        try {
+            InputStream inputStream = new FileInputStream(inFile);
+            charStream = CharStreams.fromStream(inputStream);
+        } catch (IOException ex) {
+            System.out.println("mal: No such file: " + inFile);
+            System.exit(1);
+        }
 
         MalLexer lexer = new MalLexer(charStream);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
-        MalParser parser = new MalParser(tokens);
-        ParseTree tree = parser.uProgram();
+        MalParser malParser = new MalParser(tokens);
+        ParseTree tree = malParser.uProgram();
 
         ParseTreeWalker walker = new ParseTreeWalker();
         Translator translator = new Translator();
         walker.walk(translator, tree);
 
-        // TODO Add binary file creation
         Allocator.process(translator.getProgram());
-        TextPrinter.printProgram(translator.getProgram(), DEFAULT_PROGRAM_WORDS, "a.out");
+        try {
+            if (textFormat)
+                TextWriter.write(translator.getProgram(), DEFAULT_PROGRAM_WORDS, outFile);
+            else
+                BinaryWriter.write(translator.getProgram(), DEFAULT_PROGRAM_WORDS, outFile);
+        } catch (IOException ex) {
+            System.out.println("mal: Can't write file: " + outFile);
+            System.exit(1);
+        }
+    }
+
+    private static void parseOptions(String[] args) {
+        Options options = getOptions();
+        CommandLineParser cmdParser = new DefaultParser();
+
+        CommandLine cmd = null;
+        try {
+            cmd = cmdParser.parse(options, args);
+        } catch (ParseException ex) {
+            System.out.println("mal: " + ex.getMessage());
+            System.exit(1);
+        }
+
+        if (cmd.hasOption("f")) {
+            String formatArgument = cmd.getOptionValue("f");
+            if (formatArgument.equals("binary"))
+                textFormat = false;
+            else if (formatArgument.equals("text"))
+                textFormat = true;
+            else {
+                System.out.println("mal: Unrecognized argument for option: f");
+            }
+        }
+
+        if (cmd.hasOption("h")) {
+            printHelp(options);
+            System.exit(0);
+        }
+
+        try {
+            inFile = cmd.getArgList().get(0);
+        } catch (IndexOutOfBoundsException ex) {
+            System.out.println("mal: No input file");
+            System.exit(1);
+        }
+
+        outFile = cmd.hasOption("o") ? cmd.getOptionValue("o") :
+                (textFormat ? DEFAULT_OUT_TEXT: DEFAULT_OUT_BINARY);
+    }
+
+    private static Options getOptions() {
+        Option outFile = Option.builder("o")
+                .argName("file")
+                .hasArg()
+                .desc("write output to <file>")
+                .build();
+
+        Option format = Option.builder("f")
+                .argName("format")
+                .hasArg()
+                .desc("output format: binary (default) | text")
+                .build();
+
+        Option help = Option.builder("h")
+                .longOpt("help")
+                .desc("display this help and exit")
+                .build();
+
+        Options options = new Options();
+        options.addOption(outFile);
+        options.addOption(format);
+        options.addOption(help);
+
+        return options;
+    }
+
+    private static void printHelp(Options options) {
+        String header = "Assembler for MIC-1 Micro-Assembly language\n\noptions:\n";
+
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.printHelp("mal [options] <input>", header, options, "",false);
     }
 }

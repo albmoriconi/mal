@@ -213,4 +213,30 @@ public class Instruction {
     public boolean hasTargetLabel() {
         return !targetLabel.isEmpty();
     }
+
+    /**
+     * Returns a string object with the binary representation of the instruction.
+     *
+     * @return A string object with the binary representation of the instruction.
+     */
+    @Override public String toString() {
+        StringBuilder instructionText = new StringBuilder(Instruction.INSTRUCTION_LENGTH);
+
+        String nextAddressFormat = "%" + Instruction.NEXT_ADDRESS_FIELD_LENGTH + "s";
+        String nextAddress = Integer.toBinaryString(this.nextAddress);
+
+        if (nextAddress.length() > Instruction.NEXT_ADDRESS_FIELD_LENGTH)
+            nextAddress = nextAddress.substring(nextAddress.length() - Instruction.NEXT_ADDRESS_FIELD_LENGTH);
+
+        instructionText.append(String.format(nextAddressFormat, nextAddress).replace(" ", "0"));
+
+        for (int j = 0; j < Instruction.CONTROL_FIELD_LENGTH; j++) {
+            if (this.control.get(j))
+                instructionText.append("1");
+            else
+                instructionText.append("0");
+        }
+
+        return instructionText.toString();
+    }
 }

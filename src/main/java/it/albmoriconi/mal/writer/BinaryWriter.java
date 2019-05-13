@@ -48,6 +48,8 @@ public class BinaryWriter {
      * @param program A MAL program.
      * @param programWords The number of words in the control store.
      * @param fileName The path of the output file.
+     *
+     * @throws IOException If file can't be opened for any reason.
      */
     public static void write(Program program, int programWords, String fileName) throws IOException {
         Map<Integer, Instruction> controlStoreMapping = new HashMap<>();

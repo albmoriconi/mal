@@ -23,6 +23,8 @@ import it.albmoriconi.mal.program.CBit;
 import it.albmoriconi.mal.program.Instruction;
 import it.albmoriconi.mal.program.Program;
 
+import org.antlr.v4.runtime.tree.ErrorNode;
+
 /**
  * Listens to events on the parsed MAL source, producing a translated program.
  * <p>
@@ -59,6 +61,8 @@ public class Translator extends MalBaseListener {
     private int blockStartInstruction;
     private int blockSize;
 
+    private boolean errorState;
+
     /**
      * Getter for program.
      *
@@ -69,9 +73,18 @@ public class Translator extends MalBaseListener {
     }
 
     /**
+     * Getter for errorState
+     *
+     * @return <code>true</code> if, and only if, there are parsing errors.
+     */
+    public boolean getErrorState() {
+        return errorState;
+    }
+
+    /**
      * {@inheritDoc}
      */
-    @Override public void enterUProgram(MalParser.UProgramContext ctx) {
+    @Override public void enterProgram(MalParser.ProgramContext ctx) {
         program = new Program();
         inContiguousAllocation = false;
         reclaimedBlockStart = Instruction.UNDETERMINED;
@@ -79,12 +92,13 @@ public class Translator extends MalBaseListener {
         inBlockAnnotation = true; // Start in block annotation for entry point
         blockStartInstruction = 0;
         blockSize = 1;
+        errorState = false;
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override public void exitUProgram(MalParser.UProgramContext ctx) {
+    @Override public void exitProgram(MalParser.ProgramContext ctx) {
         if (inContiguousAllocation) {
             inContiguousAllocation = false;
             program.getReclaimPromises().put(reclaimedBlockStart, reclaimedBlockEnd - 1);
@@ -452,8 +466,10 @@ public class Translator extends MalBaseListener {
      * {@inheritDoc}
      */
     @Override public void enterIfStatement(MalParser.IfStatementContext ctx) {
-        currentInstruction.setTargetLabel(ctx.NAME().get(1).getText());
-        program.addIfElseTarget(ctx.NAME().get(0).getText(), ctx.NAME().get(1).getText());
+        if (ctx.NAME().size() == 2) {
+            currentInstruction.setTargetLabel(ctx.NAME().get(1).getText());
+            program.addIfElseTarget(ctx.NAME().get(0).getText(), ctx.NAME().get(1).getText());
+        }
     }
 
     /**
@@ -471,5 +487,12 @@ public class Translator extends MalBaseListener {
      */
     @Override public void enterHaltStatement(MalParser.HaltStatementContext ctx) {
         currentInstruction.setIsHalt(true);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override public void visitErrorNode(ErrorNode node) {
+        errorState = true;
     }
 }

@@ -75,11 +75,16 @@ public class Assembler {
         MalLexer lexer = new MalLexer(charStream);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         MalParser malParser = new MalParser(tokens);
-        ParseTree tree = malParser.uProgram();
+        ParseTree tree = malParser.program();
 
         ParseTreeWalker walker = new ParseTreeWalker();
         Translator translator = new Translator();
         walker.walk(translator, tree);
+
+        if (translator.getErrorState()) {
+            System.out.println("mal: Source contains errors");
+            System.exit(1);
+        }
 
         Allocator.process(translator.getProgram());
         try {

@@ -19,7 +19,7 @@
 
 grammar Mal;
 
-uProgram : instruction*;
+program : instruction*;
 
 instruction : label? statementSequence;
 

@@ -46,10 +46,33 @@ options:
  -o <file>     write output to <file>
  ```
  
-## Syntax
+## Syntax and semantics
 
-Work in progress.
+The language is clearly described in Tanenbaum (2013). This section describes
+the changes made to its syntax and semantics.
+
+### Case
+
+The language is case sensitive. Statements are lower case, register names are
+upper case.
+
+### Comments
+
+Comments go from a `#` character to the end of line.
+
+### Statements
+
+Two kinds of statements have been added: `empty`, that means that no bus, memory
+or ALU operation is made during the cycle, and `halt`, that translates to an
+empty instruction that has its address in the next address field.
+
+### Labels
+
+The syntax for labels is `label [= address]:` where the optional `address` is
+hexadecimal, prefixed with `0x`, and specifies the instruction position in the
+control store.
 
 ## References
 
-* Tanenbaum, A.S, and Austin, T. (2013). *Structured Computer Organization* (6th ed.). Pearson.
+* Tanenbaum, A.S, and Austin, T. (2013). *Structured Computer Organization* (6th
+  ed.). Pearson.

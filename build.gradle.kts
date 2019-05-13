@@ -26,3 +26,10 @@ application {
 tasks.generateGrammarSource {
     arguments = arguments + listOf("-package", "it.albmoriconi.mal.antlr")
 }
+
+tasks.startScripts {
+    doLast {
+        unixScript.writeText(unixScript.readText().
+                replaceFirst("cd \"\$(dirname \"\$0\")\"", "cd \"\$SAVED\""))
+    }
+}

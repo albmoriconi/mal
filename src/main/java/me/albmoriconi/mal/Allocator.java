@@ -15,11 +15,11 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package it.albmoriconi.mal;
+package me.albmoriconi.mal;
 
-import it.albmoriconi.mal.controlstore.FreeChunkChain;
-import it.albmoriconi.mal.program.Instruction;
-import it.albmoriconi.mal.program.Program;
+import me.albmoriconi.mal.controlstore.FreeChunkChain;
+import me.albmoriconi.mal.program.Instruction;
+import me.albmoriconi.mal.program.Program;
 
 import java.util.List;
 

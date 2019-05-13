@@ -15,33 +15,31 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package it.albmoriconi.mal.writer;
+package me.albmoriconi.mal.writer;
 
-import it.albmoriconi.mal.program.Instruction;
-import it.albmoriconi.mal.program.Program;
+import me.albmoriconi.mal.program.Instruction;
+import me.albmoriconi.mal.program.Program;
 
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * Binary file writer for MAL assembled program.
+ * Text file writer for for MAL assembled program.
  * <p>
  * See {@link #write} for detailed description.
  */
-public class BinaryWriter {
+public class TextWriter {
 
-    private static final int BYTE_SIZE = 8;
-    private static final int BINARY_RADIX = 2;
-
-    private BinaryWriter() { }
+    private TextWriter() { }
 
     /**
-     * Binary file writer for MAL assembled program.
+     * Text file writer for MAL assembled program.
      * <p>
+     * Every row in the output is the word of the same index in the control store.
      * If more than one instruction in the translated program have the same address, which one is
      * preserved is undefined.
      *
@@ -57,27 +55,13 @@ public class BinaryWriter {
         for (Instruction ti : program.getInstructions())
             controlStoreMapping.put(ti.getAddress(), ti);
 
-        int programBits = programWords * Instruction.INSTRUCTION_LENGTH;
-        programBits += programBits % BYTE_SIZE; // Ensure output contains entire number of bytes
-        StringBuilder programText = new StringBuilder(programBits);
+        BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
 
         for (int i = 0; i < programWords; i++) {
             Instruction ci = controlStoreMapping.get(i);
-            programText.append(Objects.requireNonNullElseGet(ci, () -> "0".repeat(Instruction.INSTRUCTION_LENGTH)));
-        }
-        programText.append("0".repeat(programBits - programText.toString().length()));
-
-        int programBytes = programBits / BYTE_SIZE;
-        byte[] outputBytes = new byte[programBytes];
-
-        for (int i = 0; i < programBytes - 1; i++) {
-            int wordStart = i * BYTE_SIZE;
-            int wordEnd = wordStart + BYTE_SIZE;
-            outputBytes[i] = (byte) Integer.parseInt(programText.toString().substring(wordStart, wordEnd), BINARY_RADIX);
+            writer.write(Objects.requireNonNullElseGet(ci, () -> "0".repeat(Instruction.INSTRUCTION_LENGTH)) + "\n");
         }
 
-        BufferedOutputStream writer = new BufferedOutputStream(new FileOutputStream(fileName));
-        writer.write(outputBytes);
         writer.flush();
     }
 }

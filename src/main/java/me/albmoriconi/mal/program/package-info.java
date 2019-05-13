@@ -18,4 +18,4 @@
 /**
  * Classes used for representing a MAL program.
  */
-package it.albmoriconi.mal.program;
+package me.albmoriconi.mal.program;

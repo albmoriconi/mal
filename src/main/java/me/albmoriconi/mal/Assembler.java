@@ -15,12 +15,12 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package it.albmoriconi.mal;
+package me.albmoriconi.mal;
 
-import it.albmoriconi.mal.antlr.MalLexer;
-import it.albmoriconi.mal.antlr.MalParser;
-import it.albmoriconi.mal.writer.BinaryWriter;
-import it.albmoriconi.mal.writer.TextWriter;
+import me.albmoriconi.mal.antlr.MalLexer;
+import me.albmoriconi.mal.antlr.MalParser;
+import me.albmoriconi.mal.writer.BinaryWriter;
+import me.albmoriconi.mal.writer.TextWriter;
 
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;

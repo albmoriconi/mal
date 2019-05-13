@@ -18,4 +18,4 @@
 /**
  * Contains classes for parsing and assembling the MAL source.
  */
-package it.albmoriconi.mal;
+package me.albmoriconi.mal;

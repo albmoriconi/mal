@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package it.albmoriconi.mal.program;
+package me.albmoriconi.mal.program;
 
 import java.util.BitSet;
 

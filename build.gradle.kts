@@ -20,11 +20,11 @@ dependencies {
 
 application {
     // Define the main class for the application
-    mainClassName = "it.albmoriconi.mal.Assembler"
+    mainClassName = "me.albmoriconi.mal.Assembler"
 }
 
 tasks.generateGrammarSource {
-    arguments = arguments + listOf("-package", "it.albmoriconi.mal.antlr")
+    arguments = arguments + listOf("-package", "me.albmoriconi.mal.antlr")
 }
 
 tasks.startScripts {

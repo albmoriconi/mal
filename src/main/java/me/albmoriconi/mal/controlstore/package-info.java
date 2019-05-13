@@ -16,6 +16,6 @@
  */
 
 /**
- * Contains classes for writing a MAL program to file.
+ * Classes used for managing instruction blocks allocation in the control store.
  */
-package it.albmoriconi.mal.writer;
+package me.albmoriconi.mal.controlstore;

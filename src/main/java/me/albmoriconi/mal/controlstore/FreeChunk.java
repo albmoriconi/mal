@@ -15,7 +15,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package it.albmoriconi.mal.controlstore;
+package me.albmoriconi.mal.controlstore;
 
 /**
  * A contiguous chunk of memory words in the program control store.

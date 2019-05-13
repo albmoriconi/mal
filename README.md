@@ -10,7 +10,7 @@ Micro-Assembly Language.
 
 * [Build](#build)
 * [Usage](#usage)
-* [Syntax](#syntax)
+* [Syntax and semantics](#syntax-and-semantics)
 * [References](#references)
 
 ## Build

@@ -1,5 +1,7 @@
 # MAL 🤒
 
+[![Build Status](https://travis-ci.com/albmoriconi/mal.svg?token=YSE4xmZpZB4FSHR7YHVu&branch=master)](https://travis-ci.com/albmoriconi/mal)
+
 > French for "sick," something you become if you have to write too much code in it.
 > - Andrew S. Tanenbaum
 

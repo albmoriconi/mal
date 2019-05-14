@@ -83,10 +83,10 @@ public class Program {
             controlStoreMapping.put(ti.getAddress(), ti);
 
         for (int i = 0; i < size; i++)
-            programWords.add(
-                    Objects.requireNonNullElseGet(
-                            controlStoreMapping.get(i).toString(),
-                            () -> "0".repeat(Instruction.INSTRUCTION_LENGTH)));
+            if (controlStoreMapping.get(i) != null)
+                programWords.add(controlStoreMapping.get(i).toString());
+            else
+                programWords.add("0".repeat(Instruction.INSTRUCTION_LENGTH));
 
         return programWords;
     }

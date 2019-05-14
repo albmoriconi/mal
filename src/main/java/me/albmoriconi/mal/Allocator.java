@@ -31,20 +31,36 @@ import java.util.List;
  */
 class Allocator {
 
-    private static final int PROGRAM_WORDS = 512;
-    private static final int IF_ELSE_DISPLACEMENT = 256;
+    private final Program program;
+    private final FreeChunkChain freeChunks;
+    private final int ifElseDisplacement;
 
-    private Allocator() { }
+    /**
+     * Constructor.
+     *
+     * @param program The translated program.
+     * @param size The number of words in the control store.
+     * @param ifElseDisplacement The displacement between if and else targets.
+     */
+    Allocator(Program program, int size, int ifElseDisplacement) {
+        this.program = program;
+        this.freeChunks = new FreeChunkChain(size);
+        this.ifElseDisplacement = ifElseDisplacement;
+    }
+
+    /**
+     * Getter for program.
+     *
+     * @return The allocated program.
+     */
+    public Program getProgram() {
+        return program;
+    }
 
     /**
      * Processes the program, filling the missing address and next address fields.
-     *
-     * @param program The translated program.
      */
-    static void process(Program program) {
-        // Allocations during the processing have to update a free chunk map.
-        FreeChunkChain freeChunks = new FreeChunkChain(PROGRAM_WORDS);
-
+    void allocate() {
         // First step: honour reclaim promises made by the translator.
         // We do this in the allocator because the translator does not know the number of words and
         // can't keep a free chunk chain.
@@ -54,7 +70,7 @@ class Allocator {
         }
 
         // Second step: allocate annotated blocks (i.e. entry point and blocks without placement label)
-        allocateBlocks(program, freeChunks);
+        allocateBlocks();
 
         // Third step: now we know all the targets, set next address for remaining instructions with goto (or halt)
         for (Instruction ti : program.getInstructions()) {
@@ -65,7 +81,7 @@ class Allocator {
         }
     }
 
-    private static void allocateBlocks(Program program, FreeChunkChain freeChunks) {
+    private void allocateBlocks() {
         // Iterate over instruction counts where blocks starts
         for (int ic : program.getBlockAnnotations().keySet()) {
             String blockLabel = program.getInstructions().get(ic).getLabel();
@@ -83,16 +99,16 @@ class Allocator {
                 String elseLabel = blockIsIf ? pairBlockLabel : blockLabel;
                 int elseBlockSize = blockIsIf ? pairBlockSize : blockSize;
 
-                List<Integer> regionPair = freeChunks.getDisplacedRegions(elseBlockSize, ifBlockSize, IF_ELSE_DISPLACEMENT);
-                allocateBlock(program, freeChunks, elseLabel, regionPair.get(0));
-                allocateBlock(program, freeChunks, ifLabel, regionPair.get(1));
+                List<Integer> regionPair = freeChunks.getDisplacedRegions(elseBlockSize, ifBlockSize, ifElseDisplacement);
+                allocateBlock(elseLabel, regionPair.get(0));
+                allocateBlock(ifLabel, regionPair.get(1));
             } else { // Otherwise it's a simple block, allocate at start of first useful chunk
-                allocateBlock(program, freeChunks, blockLabel, freeChunks.getChunkGt(blockSize));
+                allocateBlock(blockLabel, freeChunks.getChunkGt(blockSize));
             }
         }
     }
 
-    private static void allocateBlock(Program program, FreeChunkChain freeChunks, String label, int firstAddress) {
+    private void allocateBlock(String label, int firstAddress) {
         int labelCount = label.isEmpty() ? 0 : program.getCountForLabel().get(label);
         int blockSize = program.getBlockAnnotations().get(labelCount);
 

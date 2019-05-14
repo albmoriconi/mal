@@ -47,7 +47,7 @@ dependencies {
 
 application {
     // Define the main class for the application
-    mainClassName = "me.albmoriconi.mal.Assembler"
+    mainClassName = "me.albmoriconi.mal.cli.Application"
 }
 
 tasks.generateGrammarSource {

@@ -19,6 +19,7 @@ package me.albmoriconi.mal;
 
 import me.albmoriconi.mal.antlr.MalLexer;
 import me.albmoriconi.mal.antlr.MalParser;
+import me.albmoriconi.mal.writer.BaseProgramWriter;
 import me.albmoriconi.mal.writer.BinaryWriter;
 import me.albmoriconi.mal.writer.TextWriter;
 
@@ -88,10 +89,8 @@ public class Assembler {
 
         Allocator.process(translator.getProgram());
         try {
-            if (textFormat)
-                TextWriter.write(translator.getProgram(), DEFAULT_PROGRAM_WORDS, outFile);
-            else
-                BinaryWriter.write(translator.getProgram(), DEFAULT_PROGRAM_WORDS, outFile);
+            BaseProgramWriter writer = textFormat ? new TextWriter(outFile) : new BinaryWriter(outFile);
+            writer.write(translator.getProgram(), DEFAULT_PROGRAM_WORDS);
         } catch (IOException ex) {
             System.out.println("mal: Can't write file: " + outFile);
             System.exit(1);
@@ -102,6 +101,7 @@ public class Assembler {
         Options options = getOptions();
         CommandLineParser cmdParser = new DefaultParser();
 
+        // Parse command line
         CommandLine cmd = null;
         try {
             cmd = cmdParser.parse(options, args);
@@ -110,6 +110,21 @@ public class Assembler {
             System.exit(1);
         }
 
+        // Print help message
+        if (cmd.hasOption("h")) {
+            printHelp(options);
+            System.exit(0);
+        }
+
+        // Set input file
+        try {
+            inFile = cmd.getArgList().get(0);
+        } catch (IndexOutOfBoundsException ex) {
+            System.out.println("mal: No input file");
+            System.exit(1);
+        }
+
+        // Set format
         if (cmd.hasOption("f")) {
             String formatArgument = cmd.getOptionValue("f");
             if (formatArgument.equals("binary"))
@@ -121,20 +136,9 @@ public class Assembler {
             }
         }
 
-        if (cmd.hasOption("h")) {
-            printHelp(options);
-            System.exit(0);
-        }
-
-        try {
-            inFile = cmd.getArgList().get(0);
-        } catch (IndexOutOfBoundsException ex) {
-            System.out.println("mal: No input file");
-            System.exit(1);
-        }
-
+        // Set output file
         outFile = cmd.hasOption("o") ? cmd.getOptionValue("o") :
-                (textFormat ? DEFAULT_OUT_TEXT: DEFAULT_OUT_BINARY);
+                (textFormat ? DEFAULT_OUT_TEXT : DEFAULT_OUT_BINARY);
     }
 
     private static Options getOptions() {

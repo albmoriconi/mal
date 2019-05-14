@@ -32,12 +32,20 @@ import java.util.Objects;
  * <p>
  * See {@link #write} for detailed description.
  */
-public class BinaryWriter {
+public class BinaryWriter extends BaseProgramWriter {
 
-    private static final int BYTE_SIZE = 8;
-    private static final int BINARY_RADIX = 2;
+    private final BufferedOutputStream writer;
 
-    private BinaryWriter() { }
+    /**
+     * Constructor.
+     *
+     * @param fileName The path of the output file.
+     *
+     * @throws IOException If file can't be opened for any reason.
+     */
+    public BinaryWriter(String fileName) throws IOException {
+        this.writer = new BufferedOutputStream(new FileOutputStream(fileName));
+    }
 
     /**
      * Binary file writer for MAL assembled program.
@@ -46,38 +54,12 @@ public class BinaryWriter {
      * preserved is undefined.
      *
      * @param program A MAL program.
-     * @param programWords The number of words in the control store.
-     * @param fileName The path of the output file.
+     * @param size The number of words in the control store.
      *
-     * @throws IOException If file can't be opened for any reason.
+     * @throws IOException If an IO error occurs.
      */
-    public static void write(Program program, int programWords, String fileName) throws IOException {
-        Map<Integer, Instruction> controlStoreMapping = new HashMap<>();
-
-        for (Instruction ti : program.getInstructions())
-            controlStoreMapping.put(ti.getAddress(), ti);
-
-        int programBits = programWords * Instruction.INSTRUCTION_LENGTH;
-        programBits += programBits % BYTE_SIZE; // Ensure output contains entire number of bytes
-        StringBuilder programText = new StringBuilder(programBits);
-
-        for (int i = 0; i < programWords; i++) {
-            Instruction ci = controlStoreMapping.get(i);
-            programText.append(Objects.requireNonNullElseGet(ci, () -> "0".repeat(Instruction.INSTRUCTION_LENGTH)));
-        }
-        programText.append("0".repeat(programBits - programText.toString().length()));
-
-        int programBytes = programBits / BYTE_SIZE;
-        byte[] outputBytes = new byte[programBytes];
-
-        for (int i = 0; i < programBytes - 1; i++) {
-            int wordStart = i * BYTE_SIZE;
-            int wordEnd = wordStart + BYTE_SIZE;
-            outputBytes[i] = (byte) Integer.parseInt(programText.toString().substring(wordStart, wordEnd), BINARY_RADIX);
-        }
-
-        BufferedOutputStream writer = new BufferedOutputStream(new FileOutputStream(fileName));
-        writer.write(outputBytes);
+    @Override public void write(Program program, int size) throws IOException {
+        writer.write(program.getBytes(size));
         writer.flush();
     }
 }

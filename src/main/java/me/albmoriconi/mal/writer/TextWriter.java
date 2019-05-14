@@ -17,24 +17,31 @@
 
 package me.albmoriconi.mal.writer;
 
-import me.albmoriconi.mal.program.Instruction;
 import me.albmoriconi.mal.program.Program;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
 
 /**
  * Text file writer for for MAL assembled program.
  * <p>
  * See {@link #write} for detailed description.
  */
-public class TextWriter {
+public class TextWriter extends BaseProgramWriter {
 
-    private TextWriter() { }
+    private final BufferedWriter writer;
+
+    /**
+     * Constructor.
+     *
+     * @param fileName The path of the output file.
+     *
+     * @throws IOException If file can't be opened for any reason.
+     */
+    public TextWriter(String fileName) throws IOException {
+        this.writer = new BufferedWriter(new FileWriter(fileName));
+    }
 
     /**
      * Text file writer for MAL assembled program.
@@ -44,24 +51,13 @@ public class TextWriter {
      * preserved is undefined.
      *
      * @param program A MAL program.
-     * @param programWords The number of words in the control store.
-     * @param fileName The path of the output file.
+     * @param size The number of words in the control store.
      *
-     * @throws IOException If file can't be opened for any reason.
+     * @throws IOException If an IO error occurs.
      */
-    public static void write(Program program, int programWords, String fileName) throws IOException {
-        Map<Integer, Instruction> controlStoreMapping = new HashMap<>();
-
-        for (Instruction ti : program.getInstructions())
-            controlStoreMapping.put(ti.getAddress(), ti);
-
-        BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
-
-        for (int i = 0; i < programWords; i++) {
-            Instruction ci = controlStoreMapping.get(i);
-            writer.write(Objects.requireNonNullElseGet(ci, () -> "0".repeat(Instruction.INSTRUCTION_LENGTH)) + "\n");
-        }
-
+    @Override public void write(Program program, int size) throws IOException {
+        for (String word : program.getWords(size))
+            writer.write(word + "\n");
         writer.flush();
     }
 }

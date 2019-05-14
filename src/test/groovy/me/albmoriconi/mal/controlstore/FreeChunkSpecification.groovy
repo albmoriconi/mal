@@ -22,7 +22,7 @@ import spock.lang.*
 class FreeChunkSpecification extends Specification {
 
     @Unroll
-    def "creating a free chunk from #startAddress to #endAddress"() {
+    def "creating a free chunk (#startAddress, #endAddress)"() {
         given:
         def fc1 = new FreeChunk(startAddress, endAddress)
 
@@ -37,12 +37,22 @@ class FreeChunkSpecification extends Specification {
         28           | 36
     }
 
-    def "creating an invalid free chunk"() {
+    @Unroll
+    def "creating an invalid free chunk (#startAddress, #endAddress)"() {
         when:
-        new FreeChunk(38, 2)
+        new FreeChunk(startAddress, endAddress)
 
         then:
         thrown IllegalArgumentException
+
+        where:
+        startAddress | endAddress
+        0            | -5
+        8            | -5
+        -6           | -10
+        -12          | -4
+        5            | 2
+        5            | 0
     }
 
     @Unroll

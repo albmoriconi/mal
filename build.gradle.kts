@@ -55,6 +55,7 @@ tasks.generateGrammarSource {
 }
 
 tasks.startScripts {
+    // Fix a bug in darwin script when launching a link from home dir
     doLast {
         unixScript.writeText(unixScript.readText().
                 replaceFirst("cd \"\$(dirname \"\$0\")\"", "cd \"\$SAVED\""))

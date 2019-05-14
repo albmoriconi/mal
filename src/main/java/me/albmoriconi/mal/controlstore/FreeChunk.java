@@ -30,9 +30,11 @@ class FreeChunk {
      *
      * @param startAddress First address of the chunk.
      * @param endAddress Last address of the chunk.
+     *
+     * @throws IllegalArgumentException If expressed size is invalid.
      */
     FreeChunk(int startAddress, int endAddress) {
-        if (startAddress > endAddress)
+        if (startAddress < 0 || endAddress < 0 || startAddress > endAddress)
             throw new IllegalArgumentException("Illegal chunk size");
 
         setStartAddress(startAddress);

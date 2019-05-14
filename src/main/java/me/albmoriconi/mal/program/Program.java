@@ -17,12 +17,8 @@
 
 package me.albmoriconi.mal.program;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * A MAL program.
@@ -39,6 +35,9 @@ import java.util.Set;
  * </ul>
  */
 public class Program {
+
+    private static final int BYTE_SIZE = 8;
+    private static final int BINARY_RADIX = 2;
 
     private List<Instruction> instructions;
     private Map<String, Integer> addressForLabel;
@@ -68,6 +67,53 @@ public class Program {
      */
     public List<Instruction> getInstructions() {
         return instructions;
+    }
+
+    /**
+     * Gets the content of the control store as a list of Strings.
+     *
+     * @param size The size in words of the control store.
+     * @return A list of instruction Strings of given size.
+     */
+    public List<String> getWords(int size) {
+        Map<Integer, Instruction> controlStoreMapping = new HashMap<>();
+        List<String> programWords = new ArrayList<>(size);
+
+        for (Instruction ti : getInstructions())
+            controlStoreMapping.put(ti.getAddress(), ti);
+
+        for (int i = 0; i < size; i++)
+            programWords.add(
+                    Objects.requireNonNullElseGet(
+                            controlStoreMapping.get(i).toString(),
+                            () -> "0".repeat(Instruction.INSTRUCTION_LENGTH)));
+
+        return programWords;
+    }
+
+    /**
+     * Gets the content of the control store as a byte array.
+     *
+     * @param size The size in words of the control store.
+     * @return The control store content as a byte array.
+     */
+    public byte[] getBytes(int size) {
+        int nOfBits = size * Instruction.INSTRUCTION_LENGTH;
+        nOfBits += nOfBits % BYTE_SIZE; // Ensure no truncated byte in output
+
+        String programString = String.join("", getWords(size));
+        programString += "0".repeat(nOfBits - programString.length()); // Ensure no truncated byte in string
+
+        int nOfBytes = nOfBits / BYTE_SIZE;
+        byte[] programBytes = new byte[nOfBytes];
+
+        for (int i = 0; i < nOfBytes - 1; i++) {
+            int wordStart = i * BYTE_SIZE;
+            int wordEnd = wordStart + BYTE_SIZE;
+            programBytes[i] = (byte) Integer.parseInt(programString.substring(wordStart, wordEnd), BINARY_RADIX);
+        }
+
+        return programBytes;
     }
 
     /**

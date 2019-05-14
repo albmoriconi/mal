@@ -1,4 +1,4 @@
-# MAL
+# MAL 🤒
 
 > French for "sick," something you become if you have to write too much code in it.
 > - Andrew S. Tanenbaum

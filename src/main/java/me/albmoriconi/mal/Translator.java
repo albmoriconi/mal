@@ -201,7 +201,8 @@ public class Translator extends MalBaseListener {
                 currentInstruction.getControl().set(CBit.B_3.getBitIndex());
                 break;
             default:
-                currentInstruction.getControl().set(CBit.B_0.getBitIndex(), CBit.B_3.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_3.getBitIndex());
+                currentInstruction.getControl().set(CBit.B_0.getBitIndex());
                 break;
         }
     }

@@ -76,7 +76,9 @@ public class Instruction {
         this.targetLabel = "";
 
         // By default, an instruction doesn't read any register on the B bus
-        this.control.set(CBit.B_0.getBitIndex(), CBit.B_3.getBitIndex());
+        // Set an unused value (a.t.m. 1001 to 1111 are unused)
+        this.control.set(CBit.B_3.getBitIndex());
+        this.control.set(CBit.B_0.getBitIndex());
     }
 
     /**

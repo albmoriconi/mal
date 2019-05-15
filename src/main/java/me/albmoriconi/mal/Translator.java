@@ -166,7 +166,8 @@ public class Translator extends MalBaseListener {
      * {@inheritDoc}
      */
     @Override public void enterBRegister(MalParser.BRegisterContext ctx) {
-        currentInstruction.getControl().clear(CBit.B_0.getBitIndex(), CBit.B_3.getBitIndex());
+        currentInstruction.getControl().clear(CBit.B_3.getBitIndex());
+        currentInstruction.getControl().clear(CBit.B_0.getBitIndex());
 
         switch (ctx.getText()) {
             case "MAR":

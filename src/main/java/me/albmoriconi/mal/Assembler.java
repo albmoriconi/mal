@@ -26,6 +26,8 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import java.util.Objects;
+
 /**
  * Assembles input MAL source code.
  * <p>
@@ -46,6 +48,7 @@ public class Assembler {
      * @param ifElseDisplacement The displacement between if and else targets.
      */
     public Assembler(CharStream charStream, int size, int ifElseDisplacement) {
+        Objects.requireNonNull(charStream, "Unexpected null reference in Assembler#Constructor");
         this.charStream = charStream;
         this.size = size;
         this.ifElseDisplacement = ifElseDisplacement;

@@ -22,6 +22,7 @@ import me.albmoriconi.mal.program.Program;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Objects;
 
 /**
  * Text file writer for for MAL assembled program.
@@ -56,6 +57,7 @@ public class TextWriter extends BaseProgramWriter {
      * @throws IOException If an IO error occurs.
      */
     @Override public void write(Program program, int size) throws IOException {
+        Objects.requireNonNull(program, "Unexpected null reference in TextWriter#write");
         for (String word : program.getWords(size))
             writer.write(word + "\n");
         writer.flush();

@@ -22,6 +22,7 @@ import me.albmoriconi.mal.program.Instruction;
 import me.albmoriconi.mal.program.Program;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Determines the address and next address fields for instructions in a program.
@@ -43,6 +44,7 @@ class Allocator {
      * @param ifElseDisplacement The displacement between if and else targets.
      */
     Allocator(Program program, int size, int ifElseDisplacement) {
+        Objects.requireNonNull(program, "Unexpected null reference in Allocator#Constructor");
         this.program = program;
         this.freeChunks = new FreeChunkChain(size);
         this.ifElseDisplacement = ifElseDisplacement;

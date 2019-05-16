@@ -18,7 +18,6 @@
 package me.albmoriconi.mal.program;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * A MAL program.

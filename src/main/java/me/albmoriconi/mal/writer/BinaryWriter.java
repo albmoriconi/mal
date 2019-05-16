@@ -17,14 +17,11 @@
 
 package me.albmoriconi.mal.writer;
 
-import me.albmoriconi.mal.program.Instruction;
 import me.albmoriconi.mal.program.Program;
 
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -59,6 +56,7 @@ public class BinaryWriter extends BaseProgramWriter {
      * @throws IOException If an IO error occurs.
      */
     @Override public void write(Program program, int size) throws IOException {
+        Objects.requireNonNull(program, "Unexpected null reference in BinaryWriter#write");
         writer.write(program.getBytes(size));
         writer.flush();
     }

@@ -5,8 +5,7 @@
 > French for "sick," something you become if you have to write too much code in it.
 > - Andrew S. Tanenbaum
 
-MAL is an assembler for the [MIC-1](https://en.wikipedia.org/wiki/MIC-1)
-Micro-Assembly Language.
+MAL is an assembler for the [amic-0](https://github.com/albmoriconi/amic-0) Micro-Assembly Language.
 
 ## Table of contents
 
@@ -50,8 +49,9 @@ options:
  
 ## Syntax and semantics
 
-The language is clearly described in Tanenbaum (2013). This section describes
-the changes made to its syntax and semantics.
+The language is based on the [MIC-1](https://en.wikipedia.org/wiki/MIC-1) MAL,
+clearly described in Tanenbaum (2013). This section describes the changes made
+to its syntax and semantics.
 
 ### Case
 

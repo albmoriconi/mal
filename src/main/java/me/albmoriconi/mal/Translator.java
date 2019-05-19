@@ -170,7 +170,7 @@ public class Translator extends MalBaseListener {
         currentInstruction.getControl().clear(CBit.B_0.getBitIndex());
 
         switch (ctx.getText()) {
-            case "MAR":
+            case "MDR":
                 break;
             case "PC":
                 currentInstruction.getControl().set(CBit.B_0.getBitIndex());

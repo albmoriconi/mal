@@ -24,6 +24,7 @@ the `build` task:
 
 ```sh
 $ git clone https://github.com/albmoriconi/mal.git
+$ cd mal
 $ ./gradlew build
 ```
 
